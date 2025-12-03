@@ -1,5 +1,5 @@
 import { GoogleGenAI, Modality, Type } from "@google/genai";
-import { GEMINI_MODEL_FLASH, GEMINI_MODEL_TTS, KIDNEY_KNOWLEDGE_BASE } from "../constants";
+import { GEMINI_MODEL_FLASH, GEMINI_MODEL_TTS, KIDNEY_KNOWLEDGE_BASE } from "./constants";
 import { MindMapNode, QnAItem } from "../types";
 
 const getClient = () => {
