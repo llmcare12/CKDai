@@ -1,0 +1,15 @@
+/* 1. 預設樣式 (通常先寫手機版或是通用的) */
+.container {
+  width: 100%;
+  padding: 20px;
+  background-color: white;
+}
+
+/* 2. 平板或電腦版 (當螢幕寬度大於 768px 時) */
+@media (min-width: 768px) {
+  .container {
+    width: 80%; /* 電腦版不用滿版 */
+    margin: 0 auto; /* 置中 */
+    background-color: lightblue; /* 測試用：電腦版變色 */
+  }
+}
