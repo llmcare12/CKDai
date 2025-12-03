@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { HashRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { Message, MindMapNode, QnAItem } from './types';
-import { generateChatResponse, generatePodcastAudio, generateMindMapData } from './services/geminiService';
-import MindMapGraph from './components/MindMapGraph';
+import { generateChatResponse, generatePodcastAudio, generateMindMapData } from './geminiService';
+import MindMapGraph from './MindMapGraph';
 import { APP_NAME, FIXED_QNA_LIST } from './constants';
 
 // --- Shared Components ---
