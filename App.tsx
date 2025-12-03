@@ -312,11 +312,11 @@ const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   const links = [
-    { path: '/', label: '首頁', icon: '🏠' },
-    { path: '/summary', label: 'AI 摘要', icon: '🤖' },
-    { path: '/podcast', label: 'Podcast', icon: '🎧' },
-    { path: '/mindmap', label: '心智圖', icon: '🧠' },
-    { path: '/qna', label: 'Q&A', icon: '❓' },
+    { path: '/', label: '首頁' },
+    { path: '/summary', label: 'AI 摘要' },
+    { path: '/podcast', label: 'Podcast' },
+    { path: '/mindmap', label: '心智圖' },
+    { path: '/qna', label: 'Q&A'},
   ];
 
   return (
