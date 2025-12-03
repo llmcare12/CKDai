@@ -4,6 +4,7 @@ import { Message, MindMapNode, QnAItem } from './types';
 import { generateChatResponse, generatePodcastAudio, generateMindMapData } from './geminiService';
 import MindMapGraph from './MindMapGraph';
 import { APP_NAME, FIXED_QNA_LIST } from './constants';
+import './App.css';
 
 // --- Shared Components ---
 const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ className, children, ...props }) => (
