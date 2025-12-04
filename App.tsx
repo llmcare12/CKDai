@@ -291,7 +291,7 @@ const MindMap = () => {
     <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
       <Card className="flex flex-col md:flex-row items-center gap-6">
         <div className="flex-1 w-full">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-2">
             <span className="text-3xl">
               <img 
                 src={brainImg} 
@@ -300,7 +300,7 @@ const MindMap = () => {
               />
             </span> 知識心智圖
           </h2>
-          <p className="text-gray-500 mb-4">輸入關鍵字，AI 為您整理結構化的知識圖表。</p>
+          <p className="text-gray-500 text-center mb-4">輸入關鍵字，AI 為您整理結構化的知識圖表。</p>
           {/* 🛠️ 修改 3: 改為 flex-col (手機直排) sm:flex-row (電腦橫排) */}
           <div className="flex flex-col sm:flex-row gap-3">
             <input 
