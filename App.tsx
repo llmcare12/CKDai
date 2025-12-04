@@ -125,7 +125,7 @@ const AiSummary = () => {
         <span className="text-3xl"><img 
         src={robotImg} 
         alt="AI摘要" 
-        className="w-10 h-10 object-contain" 
+        className="w-14 h-14 object-contain" 
       /></span>
         <div>
           <h2 className="text-xl font-bold text-gray-900">AI 衛教諮詢</h2>
@@ -198,10 +198,10 @@ const Podcast = () => {
   return (
     <div className="max-w-3xl mx-auto space-y-8 animate-fade-in">
       <Card className="text-center space-y-6">
-        <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto text-4xl"><img 
+        <div className="w-20 h-20 bg-[#FAEBD7] rounded-full flex items-center justify-center mx-auto text-4xl"><img 
         src={podcastImg} 
         alt="衛教Podcast" 
-        className="w-16 h-16 object-contain" 
+        className="w-20 h-20 object-contain" 
       /></div>
         <h2 className="text-2xl font-bold text-gray-900">AI 衛教 Podcast 製作</h2>
         <p className="text-gray-600">輸入您想了解的主題，AI 將為您生成專屬的語音解說。</p>
