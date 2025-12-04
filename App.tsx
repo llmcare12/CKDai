@@ -122,7 +122,11 @@ const AiSummary = () => {
   return (
     <div className="max-w-4xl mx-auto h-[calc(100vh-140px)] flex flex-col animate-fade-in">
       <div className="bg-white rounded-t-3xl shadow-lg border-b border-gray-100 p-6 flex items-center space-x-3">
-        <span className="text-3xl">💬</span>
+        <span className="text-3xl"><img 
+        src={robotImg} 
+        alt="AI摘要" 
+        className="w-10 h-10 object-contain" 
+      /></span>
         <div>
           <h2 className="text-xl font-bold text-gray-900">AI 衛教諮詢</h2>
           <p className="text-sm text-gray-500">內容源自腎臟病衛教手冊</p>
@@ -194,7 +198,11 @@ const Podcast = () => {
   return (
     <div className="max-w-3xl mx-auto space-y-8 animate-fade-in">
       <Card className="text-center space-y-6">
-        <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto text-4xl">🎧</div>
+        <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto text-4xl"><img 
+        src={podcastImg} 
+        alt="衛教Podcast" 
+        className="w-16 h-16 object-contain" 
+      /></div>
         <h2 className="text-2xl font-bold text-gray-900">AI 衛教 Podcast 製作</h2>
         <p className="text-gray-600">輸入您想了解的主題，AI 將為您生成專屬的語音解說。</p>
         
@@ -263,7 +271,11 @@ const MindMap = () => {
       <Card className="flex flex-col md:flex-row items-center gap-6">
         <div className="flex-1 w-full">
           <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2">
-            <span className="text-3xl">🧠</span> 知識心智圖
+            <span className="text-3xl"><img 
+        src={brainImg} 
+        alt="心智圖" 
+        className="w-10 h-10 object-contain" 
+      /></span> 知識心智圖
           </h2>
           <p className="text-gray-500 mb-4">輸入關鍵字，AI 為您整理結構化的知識圖表。</p>
           <div className="flex gap-3">
