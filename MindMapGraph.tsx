@@ -11,11 +11,25 @@ const colorScale = d3.scaleOrdinal<string>()
   .domain(["0", "1", "2", "3", "4"])
   .range(["#1e3a8a", "#2563eb", "#3b82f6", "#60a5fa", "#93c5fd"]);
 
-// 🛠️ 修改 1: 新增切字串函式 (每10個字一行)
-const splitString = (str: string, limit: number) => {
+// 🛠️ 修改 1: 智慧平衡切字串函式
+// 目的: 讓多行文字的長度盡量平均，避免出現「上重下輕」的情況
+// 例如: 輸入14個字，限制10 -> 原本會切成 [10, 4]，現在會切成 [7, 7]
+const splitString = (str: string, maxPerLine: number) => {
+  const len = str.length;
+  // 如果字數在限制內，直接回傳
+  if (len <= maxPerLine) {
+    return [str];
+  }
+  
+  // 1. 計算最少需要幾行 (例如 14字 / 10 = 1.4 -> 需 2 行)
+  const numLines = Math.ceil(len / maxPerLine);
+  
+  // 2. 計算平均每行應該幾個字 (例如 14字 / 2行 = 7 字/行)
+  const charsPerLine = Math.ceil(len / numLines);
+  
   const result = [];
-  for (let i = 0; i < str.length; i += limit) {
-    result.push(str.substring(i, i + limit));
+  for (let i = 0; i < len; i += charsPerLine) {
+    result.push(str.substring(i, i + charsPerLine));
   }
   return result;
 };
@@ -58,9 +72,8 @@ const MindMapGraph: React.FC<MindMapGraphProps> = ({ data }) => {
     root.x0 = height / 2;
     root.y0 = 0;
 
-    // 🛠️ 修改 2: 調整節點間距
-    // 第一個數字是「垂直間距」，改大 (50 -> 90) 以避免換行後上下重疊
-    // 第二個數字是「水平間距」
+    // 調整節點間距
+    // 垂直間距設為 90，水平間距設為 220
     const tree = d3.tree().nodeSize([90, 220]); 
 
     update(root);
@@ -95,7 +108,7 @@ const MindMapGraph: React.FC<MindMapGraphProps> = ({ data }) => {
         .style("stroke-width", 2.5)
         .style("filter", "drop-shadow(1px 1px 2px rgba(0,0,0,0.15))");
 
-      // 2. 🛠️ 修改 3: 使用 tspan 實作換行
+      // 2. 加入文字與 tspan
       const text = nodeEnter.append('text')
         .attr("text-anchor", "middle")
         .style("font-size", "14px")
@@ -107,19 +120,18 @@ const MindMapGraph: React.FC<MindMapGraphProps> = ({ data }) => {
 
       // 對每個節點的文字進行切分並加入 tspan
       text.each(function(d: any) {
-        const lines = splitString(d.data.name, 20); // 這裡設定 10 個字換行
+        // 使用新的平衡切分邏輯，門檻設為 10
+        const lines = splitString(d.data.name, 10); 
         const el = d3.select(this);
         
-        // 為了讓多行文字垂直置中，我們需要計算起始的 y 偏移
-        // 一行字大約高 1.2em (約 16-18px)
-        // 如果有 2 行，總高 2.4em，起始點要往上提 0.6em 左右
+        // 垂直置中計算
         const lineHeight = 1.2; // em
         const startDy = -(lines.length - 1) * (lineHeight / 2); 
 
         lines.forEach((line, index) => {
            el.append('tspan')
              .attr('x', 0)
-             .attr('dy', index === 0 ? `${startDy + 0.35}em` : `${lineHeight}em`) // 第一行定位，之後相對定位
+             .attr('dy', index === 0 ? `${startDy + 0.35}em` : `${lineHeight}em`)
              .text(line);
         });
       });
@@ -135,7 +147,7 @@ const MindMapGraph: React.FC<MindMapGraphProps> = ({ data }) => {
       nodeUpdate.select('text')
         .style("fill-opacity", 1);
 
-      // 3. 🛠️ 修改 4: 動態計算框框大小 (寬度 + 高度)
+      // 3. 動態計算框框大小 (寬度 + 高度)
       nodeUpdate.each(function(d: any) {
         const gNode = d3.select(this);
         const textNode = gNode.select('text').node() as SVGTextElement;
@@ -153,7 +165,7 @@ const MindMapGraph: React.FC<MindMapGraphProps> = ({ data }) => {
             .attr('width', rectWidth)
             .attr('height', rectHeight)
             .attr('x', -rectWidth / 2) // 水平置中
-            .attr('y', -rectHeight / 2) // 垂直置中 (因為文字中心是 0,0)
+            .attr('y', -rectHeight / 2) // 垂直置中
             .style("fill", d._children ? "#fef3c7" : "#e0f2fe")
             .style("stroke", colorScale(d.depth.toString()));
         }
