@@ -1,21 +1,24 @@
-
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
-import { MindMapNode } from '../types';
+import { MindMapNode } from './types';
 
 interface MindMapGraphProps {
   data: MindMapNode;
 }
 
-// Color scale for different depth levels to make it visually appealing
-// Level 0 (Root): Dark Blue
-// Level 1: Blue
-// Level 2: Light Blue
-// Level 3: Sky Blue
-// Level 4: Pale Blue
+// 顏色設定
 const colorScale = d3.scaleOrdinal<string>()
   .domain(["0", "1", "2", "3", "4"])
   .range(["#1e3a8a", "#2563eb", "#3b82f6", "#60a5fa", "#93c5fd"]);
+
+// 🛠️ 修改 1: 新增切字串函式 (每10個字一行)
+const splitString = (str: string, limit: number) => {
+  const result = [];
+  for (let i = 0; i < str.length; i += limit) {
+    result.push(str.substring(i, i + limit));
+  }
+  return result;
+};
 
 const MindMapGraph: React.FC<MindMapGraphProps> = ({ data }) => {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -28,14 +31,14 @@ const MindMapGraph: React.FC<MindMapGraphProps> = ({ data }) => {
     const width = container.clientWidth || 900;
     const height = 600;
     
-    // 1. Cleanup
+    // 1. 清理舊圖
     d3.select(svgRef.current).selectAll("*").remove();
 
-    // 2. Setup SVG & Zoom
+    // 2. 設定 SVG 與 Zoom
     const svg = d3.select(svgRef.current)
       .attr("width", width)
       .attr("height", height)
-      .style("background-color", "#f8fafc") // Very light gray background
+      .style("background-color", "#f8fafc")
       .call(d3.zoom<SVGSVGElement, unknown>()
         .scaleExtent([0.1, 3])
         .on("zoom", (event) => {
@@ -43,21 +46,22 @@ const MindMapGraph: React.FC<MindMapGraphProps> = ({ data }) => {
         }) as any
       );
 
-    // 3. Container Group
+    // 3. 容器群組
     const g = svg.append("g")
-      .attr("transform", "translate(100,300)"); // Initial centering
+      .attr("transform", "translate(100,300)");
 
     let i = 0;
     const duration = 500;
     
-    // 4. Hierarchy setup
+    // 4. 設定層級資料
     const root = d3.hierarchy(data) as any;
     root.x0 = height / 2;
     root.y0 = 0;
 
-    // Tree Layout: nodeSize([height, width]) -> determines spacing
-    // Increased spacing to fit the pills
-    const tree = d3.tree().nodeSize([50, 200]); 
+    // 🛠️ 修改 2: 調整節點間距
+    // 第一個數字是「垂直間距」，改大 (50 -> 90) 以避免換行後上下重疊
+    // 第二個數字是「水平間距」
+    const tree = d3.tree().nodeSize([90, 220]); 
 
     update(root);
 
@@ -66,76 +70,91 @@ const MindMapGraph: React.FC<MindMapGraphProps> = ({ data }) => {
       const nodes = treeData.descendants();
       const links = treeData.links();
 
-      // Normalize depth for fixed horizontal spacing
-      nodes.forEach((d: any) => { d.y = d.depth * 220; });
+      // 固定水平間距
+      nodes.forEach((d: any) => { d.y = d.depth * 240; });
 
       // ****************** Nodes section ***************************
 
-      // Update the nodes...
       const node = g.selectAll<SVGGElement, any>('g.node')
         .data(nodes, (d: any) => d.id || (d.id = ++i));
 
-      // Enter any new nodes at the parent's previous position.
+      // 新增節點
       const nodeEnter = node.enter().append('g')
         .attr('class', 'node')
         .attr("transform", (d: any) => `translate(${source.y0},${source.x0})`)
         .on('click', click)
         .style("cursor", "pointer");
 
-      // 1. Add Rect (Background)
-      // Distinct colorful pills
+      // 1. 加入背景框 (先給預設值，後面會依照文字大小動態調整)
       nodeEnter.append('rect')
-        .attr('rx', 15) // Round corners
-        .attr('ry', 15)
-        .attr('height', 34) // Fixed height
-        .attr('y', -17)     // Centered vertically
-        .style("fill", (d: any) => {
-           // If children are collapsed, use a distinct color or opacity
-           return d._children ? "#fef3c7" : "#ffffff"; // Yellow-ish if collapsed, White if expanded/leaf
-        })
+        .attr('rx', 12)
+        .attr('ry', 12)
+        .attr('height', 40) // 預設高度
+        .style("fill", (d: any) => d._children ? "#fef3c7" : "#ffffff")
         .style("stroke", (d: any) => colorScale(d.depth.toString()))
         .style("stroke-width", 2.5)
-        .style("filter", "drop-shadow(1px 1px 2px rgba(0,0,0,0.15))"); // Shadow
+        .style("filter", "drop-shadow(1px 1px 2px rgba(0,0,0,0.15))");
 
-      // 2. Add Text
-      nodeEnter.append('text')
-        .attr("dy", ".35em")
+      // 2. 🛠️ 修改 3: 使用 tspan 實作換行
+      const text = nodeEnter.append('text')
         .attr("text-anchor", "middle")
-        .text((d: any) => d.data.name)
         .style("font-size", "14px")
         .style("font-weight", "600")
-        .style("fill", "#1e293b") // Dark Slate (Readable)
+        .style("fill", "#1e293b")
         .style("font-family", "'Noto Sans TC', sans-serif")
-        .style("pointer-events", "none") // Click goes to rect
+        .style("pointer-events", "none")
         .style("fill-opacity", 1e-6);
+
+      // 對每個節點的文字進行切分並加入 tspan
+      text.each(function(d: any) {
+        const lines = splitString(d.data.name, 10); // 這裡設定 10 個字換行
+        const el = d3.select(this);
+        
+        // 為了讓多行文字垂直置中，我們需要計算起始的 y 偏移
+        // 一行字大約高 1.2em (約 16-18px)
+        // 如果有 2 行，總高 2.4em，起始點要往上提 0.6em 左右
+        const lineHeight = 1.2; // em
+        const startDy = -(lines.length - 1) * (lineHeight / 2); 
+
+        lines.forEach((line, index) => {
+           el.append('tspan')
+             .attr('x', 0)
+             .attr('dy', index === 0 ? `${startDy + 0.35}em` : `${lineHeight}em`) // 第一行定位，之後相對定位
+             .text(line);
+        });
+      });
 
       // UPDATE
       const nodeUpdate = node.merge(nodeEnter);
 
-      // Transition to the proper position for the node
+      // 移動到正確位置
       nodeUpdate.transition()
         .duration(duration)
         .attr("transform", (d: any) => `translate(${d.y},${d.x})`);
 
-      // Update Text Opacity
       nodeUpdate.select('text')
         .style("fill-opacity", 1);
 
-      // Dynamic Rect Sizing based on text width
+      // 3. 🛠️ 修改 4: 動態計算框框大小 (寬度 + 高度)
       nodeUpdate.each(function(d: any) {
         const gNode = d3.select(this);
         const textNode = gNode.select('text').node() as SVGTextElement;
+        
         if (textNode) {
           const bbox = textNode.getBBox();
-          const padding = 30; 
-          const rectWidth = Math.max(80, bbox.width + padding);
+          const paddingX = 30; // 左右留白
+          const paddingY = 20; // 上下留白
           
-          // Update rect styling based on state
+          const rectWidth = Math.max(80, bbox.width + paddingX);
+          const rectHeight = Math.max(40, bbox.height + paddingY); // 確保高度隨文字長高
+          
           gNode.select('rect')
             .transition().duration(duration)
             .attr('width', rectWidth)
-            .attr('x', -rectWidth / 2) // Center horizontally
-            .style("fill", d._children ? "#fef3c7" : "#e0f2fe") // Change color if collapsed
+            .attr('height', rectHeight)
+            .attr('x', -rectWidth / 2) // 水平置中
+            .attr('y', -rectHeight / 2) // 垂直置中 (因為文字中心是 0,0)
+            .style("fill", d._children ? "#fef3c7" : "#e0f2fe")
             .style("stroke", colorScale(d.depth.toString()));
         }
       });
@@ -154,11 +173,10 @@ const MindMapGraph: React.FC<MindMapGraphProps> = ({ data }) => {
       const link = g.selectAll<SVGPathElement, any>('path.link')
         .data(links, (d: any) => d.target.id);
 
-      // Enter any new links at the parent's previous position.
       const linkEnter = link.enter().insert('path', "g")
         .attr("class", "link")
         .attr("fill", "none")
-        .attr("stroke", (d: any) => colorScale(d.target.depth.toString()) as string) // Link color matches target node level
+        .attr("stroke", (d: any) => colorScale(d.target.depth.toString()) as string)
         .attr("stroke-width", 2)
         .attr("stroke-opacity", 0.4)
         .attr('d', (d: any) => {
@@ -166,15 +184,12 @@ const MindMapGraph: React.FC<MindMapGraphProps> = ({ data }) => {
           return diagonal(o, o);
         });
 
-      // UPDATE
       const linkUpdate = link.merge(linkEnter);
 
-      // Transition back to the parent element position
       linkUpdate.transition()
         .duration(duration)
         .attr('d', (d: any) => diagonal(d.source, d.target));
 
-      // Remove any exiting links
       link.exit().transition()
         .duration(duration)
         .attr('d', (d: any) => {
@@ -188,7 +203,6 @@ const MindMapGraph: React.FC<MindMapGraphProps> = ({ data }) => {
         d.y0 = d.y;
       });
 
-      // Creates a curved (diagonal) path from parent to the child nodes
       function diagonal(s: any, d: any) {
         return `M ${s.y} ${s.x}
                 C ${(s.y + d.y) / 2} ${s.x},
@@ -196,7 +210,6 @@ const MindMapGraph: React.FC<MindMapGraphProps> = ({ data }) => {
                   ${d.y} ${d.x}`;
       }
 
-      // Toggle children on click.
       function click(event: any, d: any) {
         if (d.children) {
           d._children = d.children;
@@ -209,7 +222,6 @@ const MindMapGraph: React.FC<MindMapGraphProps> = ({ data }) => {
       }
     }
 
-    // Initial Center Zoom
     const initialTransform = d3.zoomIdentity.translate(100, height/2).scale(0.9);
     svg.call(d3.zoom<SVGSVGElement, unknown>().transform as any, initialTransform);
 
