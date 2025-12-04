@@ -4,6 +4,7 @@ import { Message, MindMapNode, QnAItem } from './types';
 import { generateChatResponse, generatePodcastAudio, generateMindMapData } from './geminiService';
 import MindMapGraph from './MindMapGraph';
 import { APP_NAME, FIXED_QNA_LIST } from './constants';
+import robotImg from './robot.jpg';
 
 // --- Shared Components ---
 const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ className, children, ...props }) => (
@@ -52,7 +53,7 @@ const Home = () => (
       <Link to="/summary" className="group">
         <div className="bg-white p-8 rounded-3xl shadow-md border border-gray-100 hover:shadow-xl transition-all duration-300 h-full hover:-translate-y-1">
           <div className="text-5xl mb-6 group-hover:scale-110 transition-transform duration-300"><img 
-        src="robot.jpg" 
+        src={robotImg} 
         alt="AI摘要" 
         className="w-12 h-12 object-contain" 
       /></div>
