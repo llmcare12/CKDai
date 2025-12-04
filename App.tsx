@@ -198,7 +198,7 @@ const Podcast = () => {
   return (
     <div className="max-w-3xl mx-auto space-y-8 animate-fade-in">
       <Card className="text-center space-y-6">
-        <div className="w-20 h-20 bg-[#FAEBD7] rounded-full flex items-center justify-center mx-auto text-4xl"><img 
+        <div className="w-20 h-20 bg-[#FBE5E4] rounded-full flex items-center justify-center mx-auto text-4xl"><img 
         src={podcastImg} 
         alt="衛教Podcast" 
         className="w-20 h-20 object-contain" 
