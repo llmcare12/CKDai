@@ -54,22 +54,25 @@ const Home = () => (
     <div className="grid md:grid-cols-3 gap-8">
       <Link to="/summary" className="group">
         <div className="bg-white p-8 mb-3 rounded-3xl shadow-md border border-gray-100 hover:shadow-xl transition-all duration-300 h-full hover:-translate-y-1">
-          <div className="text-5xl group-hover:scale-110 transition-transform duration-300 flex justify-center"><img 
-        src={robotImg} 
-        alt="AI摘要" 
-        className="w-32 h-32 object-contain" 
-      /></div>
+          <div className="text-5xl group-hover:scale-110 transition-transform duration-300 flex justify-center">
+            <img 
+              src={robotImg} 
+              alt="AI摘要" 
+              className="w-32 h-32 object-contain" 
+            />
+          </div>
           <h3 className="text-2xl font-bold text-gray-800 mb-3">AI 重點摘要</h3>
           <p className="text-gray-600">透過對話，即時獲得淺顯易懂的衛教解答。</p>
         </div>
       </Link>
       <Link to="/podcast" className="group">
         <div className="bg-white p-8 mb-3 rounded-3xl shadow-md border border-gray-100 hover:shadow-xl transition-all duration-300 h-full hover:-translate-y-1">
-          <div className="text-5xl group-hover:scale-110 transition-transform duration-300 flex justify-center"><img 
-        src={podcastImg} 
-        alt="衛教Podcast" 
-        className="w-32 h-32 object-contain" 
-      />
+          <div className="text-5xl group-hover:scale-110 transition-transform duration-300 flex justify-center">
+            <img 
+              src={podcastImg} 
+              alt="衛教Podcast" 
+              className="w-32 h-32 object-contain" 
+            />
           </div>
           <h3 className="text-2xl font-bold text-gray-800 mb-3">衛教 Podcast</h3>
           <p className="text-gray-600">輸入主題，生成專屬語音導覽，用聽的學習。</p>
@@ -77,11 +80,13 @@ const Home = () => (
       </Link>
       <Link to="/mindmap" className="group">
         <div className="bg-white p-8 mb-3 rounded-3xl shadow-md border border-gray-100 hover:shadow-xl transition-all duration-300 h-full hover:-translate-y-1">
-          <div className="text-5xl group-hover:scale-110 transition-transform duration-300 flex justify-center"><img 
-        src={brainImg} 
-        alt="心智圖" 
-        className="w-32 h-32 object-contain" 
-      /></div>
+          <div className="text-5xl group-hover:scale-110 transition-transform duration-300 flex justify-center">
+            <img 
+              src={brainImg} 
+              alt="心智圖" 
+              className="w-32 h-32 object-contain" 
+            />
+          </div>
           <h3 className="text-2xl font-bold text-gray-800 mb-3">知識心智圖</h3>
           <p className="text-gray-600">視覺化知識結構，快速掌握複雜概念。</p>
         </div>
@@ -120,13 +125,16 @@ const AiSummary = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto h-[calc(100vh-140px)] flex flex-col animate-fade-in">
+    // 這裡保留 dvh 修正，解決手機網址列遮擋
+    <div className="max-w-4xl mx-auto h-[calc(100dvh-140px)] flex flex-col animate-fade-in">
       <div className="bg-white rounded-t-3xl shadow-lg border-b border-gray-100 p-6 flex items-center space-x-3">
-        <span className="text-3xl"><img 
-        src={robotImg} 
-        alt="AI摘要" 
-        className="w-14 h-14 object-contain" 
-      /></span>
+        <span className="text-3xl">
+          <img 
+            src={robotImg} 
+            alt="AI摘要" 
+            className="w-14 h-14 object-contain" 
+          />
+        </span>
         <div>
           <h2 className="text-xl font-bold text-gray-900">AI 衛教諮詢</h2>
           <p className="text-sm text-gray-500">內容源自腎臟病衛教手冊</p>
@@ -166,7 +174,12 @@ const AiSummary = () => {
             placeholder="請輸入您的問題，例如：低蛋白飲食要注意什麼？"
             className="flex-1 px-6 py-4 bg-white border border-gray-200 text-gray-700 shadow-sm rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
           />
-          <Button type="submit" disabled={loading} className="bg-blue-600 text-white hover:bg-blue-700 aspect-square rounded-full flex items-center justify-center p-0 w-14 h-14">
+          {/* 🛠️ 還原: 移除了 !p-0 和 shrink-0，因為您說不需要改這裡 */}
+          <Button 
+            type="submit" 
+            disabled={loading} 
+            className="bg-blue-600 text-white hover:bg-blue-700 aspect-square rounded-full flex items-center justify-center p-0 w-14 h-14"
+          >
             <span className="text-xl">➤</span>
           </Button>
         </form>
@@ -198,22 +211,30 @@ const Podcast = () => {
   return (
     <div className="max-w-3xl mx-auto space-y-8 animate-fade-in">
       <Card className="text-center space-y-6">
-        <div className="w-20 h-20 bg-[#FBE5E4] rounded-full flex items-center justify-center mx-auto text-4xl"><img 
-        src={podcastImg} 
-        alt="衛教Podcast" 
-        className="w-20 h-20 object-contain" 
-      /></div>
+        <div className="w-20 h-20 bg-[#FBE5E4] rounded-full flex items-center justify-center mx-auto text-4xl">
+          <img 
+            src={podcastImg} 
+            alt="衛教Podcast" 
+            className="w-20 h-20 object-contain" 
+          />
+        </div>
         <h2 className="text-2xl font-bold text-gray-900">AI 衛教 Podcast 製作</h2>
         <p className="text-gray-600">輸入您想了解的主題，AI 將為您生成專屬的語音解說。</p>
         
-        <div className="flex gap-3 max-w-xl mx-auto">
+        {/* 🛠️ 修改 2: 改為 flex-col (手機直排) sm:flex-row (電腦橫排) 避免按鈕被擠壓 */}
+        <div className="flex flex-col sm:flex-row gap-3 max-w-xl mx-auto">
           <input 
             value={topic}
             onChange={e => setTopic(e.target.value)}
             placeholder="例如：慢性腎臟病飲食原則"
             className="flex-1 px-5 py-3 bg-white border border-gray-200 text-gray-700 shadow-sm rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none placeholder-gray-400"
           />
-          <Button onClick={handleGenerate} disabled={loading} className="bg-blue-600 text-white hover:bg-purple-700 whitespace-nowrap">
+          {/* 🛠️ 修改: 手機版 w-full，電腦版 w-auto */}
+          <Button 
+            onClick={handleGenerate} 
+            disabled={loading} 
+            className="bg-blue-600 text-white hover:bg-purple-700 whitespace-nowrap w-full sm:w-auto"
+          >
             製作節目
           </Button>
         </div>
@@ -271,21 +292,29 @@ const MindMap = () => {
       <Card className="flex flex-col md:flex-row items-center gap-6">
         <div className="flex-1 w-full">
           <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2">
-            <span className="text-3xl"><img 
-        src={brainImg} 
-        alt="心智圖" 
-        className="w-10 h-10 object-contain" 
-      /></span> 知識心智圖
+            <span className="text-3xl">
+              <img 
+                src={brainImg} 
+                alt="心智圖" 
+                className="w-10 h-10 object-contain" 
+              />
+            </span> 知識心智圖
           </h2>
           <p className="text-gray-500 mb-4">輸入關鍵字，AI 為您整理結構化的知識圖表。</p>
-          <div className="flex gap-3">
+          {/* 🛠️ 修改 3: 改為 flex-col (手機直排) sm:flex-row (電腦橫排) */}
+          <div className="flex flex-col sm:flex-row gap-3">
             <input 
               value={topic}
               onChange={e => setTopic(e.target.value)}
               placeholder="例如：含鉀食物有哪些？"
               className="flex-1 px-5 py-3 bg-white border border-gray-200 text-gray-700 shadow-sm rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none placeholder-gray-400"
             />
-            <Button onClick={handleGenerate} disabled={loading} className="bg-blue-600 text-white hover:bg-blue-700 whitespace-nowrap">
+            {/* 🛠️ 修改: 手機版 w-full，電腦版 w-auto */}
+            <Button 
+              onClick={handleGenerate} 
+              disabled={loading} 
+              className="bg-blue-600 text-white hover:bg-blue-700 whitespace-nowrap w-full sm:w-auto"
+            >
               生成圖表
             </Button>
           </div>
@@ -304,7 +333,6 @@ const MindMap = () => {
 };
 
 const QnA = () => {
-  // 直接使用靜態資料，不需要 useEffect 或 loading
   const items = FIXED_QNA_LIST;
 
   return (
@@ -373,7 +401,6 @@ const Navbar = () => {
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                 }`}
               >
-                <span>{link.icon}</span>
                 <span>{link.label}</span>
               </Link>
             );
@@ -409,7 +436,6 @@ const Navbar = () => {
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                 }`}
               >
-                <span className="text-xl">{link.icon}</span>
                 <span>{link.label}</span>
               </Link>
             );
