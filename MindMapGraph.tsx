@@ -107,7 +107,7 @@ const MindMapGraph: React.FC<MindMapGraphProps> = ({ data }) => {
 
       // 對每個節點的文字進行切分並加入 tspan
       text.each(function(d: any) {
-        const lines = splitString(d.data.name, 10); // 這裡設定 10 個字換行
+        const lines = splitString(d.data.name, 20); // 這裡設定 10 個字換行
         const el = d3.select(this);
         
         // 為了讓多行文字垂直置中，我們需要計算起始的 y 偏移
