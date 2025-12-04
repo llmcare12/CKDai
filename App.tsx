@@ -53,7 +53,7 @@ const Home = () => (
 
     <div className="grid md:grid-cols-3 gap-8">
       <Link to="/summary" className="group">
-        <div className="bg-white p-8 rounded-3xl shadow-md border border-gray-100 hover:shadow-xl transition-all duration-300 h-full hover:-translate-y-1">
+        <div className="bg-white p-8 mb-3 rounded-3xl shadow-md border border-gray-100 hover:shadow-xl transition-all duration-300 h-full hover:-translate-y-1">
           <div className="text-5xl group-hover:scale-110 transition-transform duration-300 flex justify-center"><img 
         src={robotImg} 
         alt="AI摘要" 
@@ -64,7 +64,7 @@ const Home = () => (
         </div>
       </Link>
       <Link to="/podcast" className="group">
-        <div className="bg-white p-8 rounded-3xl shadow-md border border-gray-100 hover:shadow-xl transition-all duration-300 h-full hover:-translate-y-1">
+        <div className="bg-white p-8 mb-3 rounded-3xl shadow-md border border-gray-100 hover:shadow-xl transition-all duration-300 h-full hover:-translate-y-1">
           <div className="text-5xl group-hover:scale-110 transition-transform duration-300 flex justify-center"><img 
         src={podcastImg} 
         alt="衛教Podcast" 
@@ -76,7 +76,7 @@ const Home = () => (
         </div>
       </Link>
       <Link to="/mindmap" className="group">
-        <div className="bg-white p-8 rounded-3xl shadow-md border border-gray-100 hover:shadow-xl transition-all duration-300 h-full hover:-translate-y-1">
+        <div className="bg-white p-8 mb-3 rounded-3xl shadow-md border border-gray-100 hover:shadow-xl transition-all duration-300 h-full hover:-translate-y-1">
           <div className="text-5xl group-hover:scale-110 transition-transform duration-300 flex justify-center"><img 
         src={brainImg} 
         alt="心智圖" 
