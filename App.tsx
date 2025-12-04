@@ -213,7 +213,7 @@ const Podcast = () => {
             placeholder="例如：慢性腎臟病飲食原則"
             className="flex-1 px-5 py-3 bg-white border border-gray-200 text-gray-700 shadow-sm rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none placeholder-gray-400"
           />
-          <Button onClick={handleGenerate} disabled={loading} className="bg-purple-600 text-white hover:bg-purple-700 whitespace-nowrap">
+          <Button onClick={handleGenerate} disabled={loading} className="bg-blue-600 text-white hover:bg-purple-700 whitespace-nowrap">
             製作節目
           </Button>
         </div>
