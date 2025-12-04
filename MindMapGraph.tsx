@@ -11,27 +11,23 @@ const colorScale = d3.scaleOrdinal<string>()
   .domain(["0", "1", "2", "3", "4"])
   .range(["#1e3a8a", "#2563eb", "#3b82f6", "#60a5fa", "#93c5fd"]);
 
-// 🛠️ 修改 1: 智慧平衡切字串函式
-// 目的: 讓多行文字的長度盡量平均，避免出現「上重下輕」的情況
-// 例如: 輸入14個字，限制10 -> 原本會切成 [10, 4]，現在會切成 [7, 7]
-const splitString = (str: string, maxPerLine: number) => {
+// 🛠️ 修改 1: 智慧平衡切字串函式 (符合您的新需求)
+// 1. 最多只要兩行
+// 2. 如果少於20字就不用換行
+const splitString = (str: string) => {
   const len = str.length;
-  // 如果字數在限制內，直接回傳
-  if (len <= maxPerLine) {
+  
+  // 規則 1: 少於 20 字不換行
+  if (len < 20) {
     return [str];
   }
   
-  // 1. 計算最少需要幾行 (例如 14字 / 10 = 1.4 -> 需 2 行)
-  const numLines = Math.ceil(len / maxPerLine);
-  
-  // 2. 計算平均每行應該幾個字 (例如 14字 / 2行 = 7 字/行)
-  const charsPerLine = Math.ceil(len / numLines);
-  
-  const result = [];
-  for (let i = 0; i < len; i += charsPerLine) {
-    result.push(str.substring(i, i + charsPerLine));
-  }
-  return result;
+  // 規則 2: 大於等於 20 字，強制切成兩行 (平衡長度)
+  const mid = Math.ceil(len / 2);
+  return [
+    str.substring(0, mid),
+    str.substring(mid)
+  ];
 };
 
 const MindMapGraph: React.FC<MindMapGraphProps> = ({ data }) => {
@@ -73,7 +69,7 @@ const MindMapGraph: React.FC<MindMapGraphProps> = ({ data }) => {
     root.y0 = 0;
 
     // 調整節點間距
-    // 垂直間距設為 90，水平間距設為 220
+    // 垂直間距設為 90
     const tree = d3.tree().nodeSize([90, 220]); 
 
     update(root);
@@ -83,8 +79,9 @@ const MindMapGraph: React.FC<MindMapGraphProps> = ({ data }) => {
       const nodes = treeData.descendants();
       const links = treeData.links();
 
-      // 固定水平間距
-      nodes.forEach((d: any) => { d.y = d.depth * 240; });
+      // 🛠️ 修改: 加大水平間距
+      // 因為現在單行可能長達 19 個字，框框會變寬，所以把 240 改成 320 避免重疊
+      nodes.forEach((d: any) => { d.y = d.depth * 320; });
 
       // ****************** Nodes section ***************************
 
@@ -120,8 +117,8 @@ const MindMapGraph: React.FC<MindMapGraphProps> = ({ data }) => {
 
       // 對每個節點的文字進行切分並加入 tspan
       text.each(function(d: any) {
-        // 使用新的平衡切分邏輯，門檻設為 10
-        const lines = splitString(d.data.name, 10); 
+        // 🛠️ 修改: 使用新的切分邏輯 (不需要傳入 maxPerLine 了)
+        const lines = splitString(d.data.name); 
         const el = d3.select(this);
         
         // 垂直置中計算
