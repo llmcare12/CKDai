@@ -52,10 +52,10 @@ const Home = () => (
     <div className="grid md:grid-cols-3 gap-8">
       <Link to="/summary" className="group">
         <div className="bg-white p-8 rounded-3xl shadow-md border border-gray-100 hover:shadow-xl transition-all duration-300 h-full hover:-translate-y-1">
-          <div className="text-5xl mb-6 group-hover:scale-110 transition-transform duration-300"><img 
+          <div className="text-5xl mb-6 group-hover:scale-110 transition-transform duration-300 flex justify-center"><img 
         src={robotImg} 
         alt="AI摘要" 
-        className="w-12 h-12 object-contain" 
+        className="w-20 h-20 object-contain" 
       /></div>
           <h3 className="text-2xl font-bold text-gray-800 mb-3">AI 重點摘要</h3>
           <p className="text-gray-600">透過對話，即時獲得淺顯易懂的衛教解答。</p>
