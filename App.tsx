@@ -5,6 +5,8 @@ import { generateChatResponse, generatePodcastAudio, generateMindMapData } from 
 import MindMapGraph from './MindMapGraph';
 import { APP_NAME, FIXED_QNA_LIST } from './constants';
 import robotImg from './robot.jpg';
+import podcastImg from './podcast.jpg';
+import brainImg from './brain.jpg';
 
 // --- Shared Components ---
 const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ className, children, ...props }) => (
@@ -63,14 +65,23 @@ const Home = () => (
       </Link>
       <Link to="/podcast" className="group">
         <div className="bg-white p-8 rounded-3xl shadow-md border border-gray-100 hover:shadow-xl transition-all duration-300 h-full hover:-translate-y-1">
-          <div className="text-5xl mb-6 group-hover:scale-110 transition-transform duration-300">🎙️</div>
+          <div className="text-5xl group-hover:scale-110 transition-transform duration-300 flex justify-center"><img 
+        src={podcastImg} 
+        alt="衛教Podcast" 
+        className="w-32 h-32 object-contain" 
+      />
+          </div>
           <h3 className="text-2xl font-bold text-gray-800 mb-3">衛教 Podcast</h3>
           <p className="text-gray-600">輸入主題，生成專屬語音導覽，用聽的學習。</p>
         </div>
       </Link>
       <Link to="/mindmap" className="group">
         <div className="bg-white p-8 rounded-3xl shadow-md border border-gray-100 hover:shadow-xl transition-all duration-300 h-full hover:-translate-y-1">
-          <div className="text-5xl mb-6 group-hover:scale-110 transition-transform duration-300">🧠</div>
+          <div className="text-5xl group-hover:scale-110 transition-transform duration-300 flex justify-center"><img 
+        src={brainImg} 
+        alt="心智圖" 
+        className="w-32 h-32 object-contain" 
+      /></div>
           <h3 className="text-2xl font-bold text-gray-800 mb-3">知識心智圖</h3>
           <p className="text-gray-600">視覺化知識結構，快速掌握複雜概念。</p>
         </div>
