@@ -7,6 +7,7 @@ import { APP_NAME, FIXED_QNA_LIST } from './constants';
 import robotImg from './robot.png';
 import podcastImg from './podcast.png';
 import brainImg from './brain.png';
+import qnaImg from './Qna.png';
 
 // --- Shared Components ---
 const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ className, children, ...props }) => (
@@ -89,6 +90,20 @@ const Home = () => (
           </div>
           <h3 className="text-2xl font-bold text-gray-800 mb-3">知識心智圖</h3>
           <p className="text-gray-600">視覺化知識結構，快速掌握複雜概念。</p>
+        </div>
+      </Link>
+      <div className="grid md:grid-cols-3 gap-8">
+      <Link to="/qna" className="group">
+        <div className="bg-white p-8 mb-3 rounded-3xl shadow-md border border-gray-100 hover:shadow-xl transition-all duration-300 h-full hover:-translate-y-1">
+          <div className="text-5xl group-hover:scale-110 transition-transform duration-300 flex justify-center">
+            <img 
+              src={qnaImg} 
+              alt="QnA" 
+              className="w-32 h-32 object-contain" 
+            />
+          </div>
+          <h3 className="text-2xl font-bold text-gray-800 mb-3">腎臟病Q&A</h3>
+          <p className="text-gray-600">彙整病患最常見的15個問題</p>
         </div>
       </Link>
     </div>
