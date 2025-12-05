@@ -246,7 +246,7 @@ const Podcast = () => {
           <Button 
             onClick={handleGenerate} 
             disabled={loading} 
-            className="bg-blue-600 text-white hover:bg-purple-700 whitespace-nowrap w-full sm:w-auto"
+            className="bg-blue-600 text-white hover:bg-blue-700 whitespace-nowrap w-full sm:w-auto"
           >
             製作節目
           </Button>
