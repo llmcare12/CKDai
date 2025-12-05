@@ -106,7 +106,7 @@ const Home = () => (
 
 const AiSummary = () => {
   const [messages, setMessages] = useState<Message[]>([
-    { id: '0', role: 'model', content: '您好！我是您的腎臟病衛教助理。您可以問我關於「飲食原則」、「症狀」、「分期」等問題，我會根據衛教手冊為您解答。' }
+    { id: '0', role: 'model', content: '您好！我是您的腎臟病衛教助理小榮。您可以問我關於「飲食原則」、「症狀」、「分期」等問題，我會根據衛教手冊為您解答。' }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
