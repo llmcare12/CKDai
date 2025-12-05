@@ -250,8 +250,8 @@ const Podcast = () => {
 
       {data && (
         <div className="animate-fade-in space-y-6">
-          <Card className="bg-gradient-to-br from-purple-50 to-white border-purple-100">
-            <h3 className="text-lg font-bold text-purple-900 mb-4 flex items-center gap-2">
+          <Card className="bg-gradient-to-br from-blue-50 to-white border-purple-100">
+            <h3 className="text-lg font-bold text-blue-900 mb-4 flex items-center gap-2">
               <span><img 
             src={playImg} 
             alt="播放" 
@@ -260,7 +260,7 @@ const Podcast = () => {
             </h3>
             <audio controls src={data.audioUrl} className="w-full" />
             <div className="mt-4 text-right">
-              <a href={data.audioUrl} download={`KidneyCare_${topic}.wav`} className="text-sm text-purple-600 hover:underline font-medium">
+              <a href={data.audioUrl} download={`KidneyCare_${topic}.wav`} className="text-sm text-blue-600 hover:underline font-medium">
                 下載音訊檔案
               </a>
             </div>
