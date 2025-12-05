@@ -8,6 +8,7 @@ import robotImg from './robot.png';
 import podcastImg from './podcast.png';
 import brainImg from './brain.png';
 import qnaImg from './Qna.png';
+import playImg from './play.png';
 
 // --- Shared Components ---
 const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ className, children, ...props }) => (
@@ -35,7 +36,6 @@ const Spinner = () => (
 // --- Pages ---
 
 const Home = () => (
-  // 1. max-w-7xl: 讓整體容器寬一點，才塞得下四個並排
   <div className="max-w-7xl mx-auto py-12 px-4 text-center space-y-12 animate-fade-in">
     <div className="space-y-6">
       <h1 className="text-4xl md:text-6xl font-black text-gray-900 tracking-tight leading-tight">
@@ -53,19 +53,15 @@ const Home = () => (
       </div>
     </div>
 
-    {/* 2. lg:grid-cols-4: 電腦版顯示一排4個 (平板維持2個，手機1個) */}
-    {/* gap-6: 間距稍微縮小一點 */}
+    
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       
       {/* 卡片 1 */}
       <Link to="/summary" className="group">
-        {/* p-6: 內距變小, rounded-2xl: 圓角稍微縮小 */}
         <div className="aspect-square bg-white p-6 rounded-2xl shadow-md border border-gray-100 hover:shadow-xl transition-all duration-300 h-full hover:-translate-y-1">
           <div className="mb-4 group-hover:scale-110 transition-transform duration-300 flex justify-center">
-            {/* w-20 h-20: 圖片變小 (原本是 w-32) */}
             <img src={robotImg} alt="AI摘要" className="w-32 h-32 object-contain" />
           </div>
-          {/* text-xl: 字體變小 */}
           <h3 className="text-2xl font-bold text-gray-800 mb-2">AI 重點摘要</h3>
           <p className="text-xl text-gray-600">透過對話，即時獲得淺顯易懂的衛教解答。</p>
         </div>
@@ -116,7 +112,7 @@ const AiSummary = () => {
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  //useEffect(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), [messages]);
+  //useEffect(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), [messages]);//不要讓AiSummary跳轉到最下面
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,7 +134,6 @@ const AiSummary = () => {
   };
 
   return (
-    // 這裡保留 dvh 修正，解決手機網址列遮擋
     <div className="max-w-4xl mx-auto h-[calc(100dvh-140px)] flex flex-col animate-fade-in">
       <div className="bg-white rounded-t-3xl shadow-lg border-b border-gray-100 p-6 flex items-center space-x-3">
         <span className="text-3xl">
@@ -187,7 +182,6 @@ const AiSummary = () => {
             placeholder="請輸入您的問題，例如：低蛋白飲食要注意什麼？"
             className="flex-1 px-6 py-4 bg-white border border-gray-200 text-gray-700 shadow-sm rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
           />
-          {/* 🛠️ 還原: 移除了 !p-0 和 shrink-0，因為您說不需要改這裡 */}
           <Button 
             type="submit" 
             disabled={loading} 
@@ -234,7 +228,7 @@ const Podcast = () => {
         <h2 className="text-2xl font-bold text-gray-900">AI 衛教 Podcast 製作</h2>
         <p className="text-gray-600">輸入您想了解的主題，AI 將為您生成專屬的語音解說。</p>
         
-        {/* 🛠️ 修改 2: 改為 flex-col (手機直排) sm:flex-row (電腦橫排) 避免按鈕被擠壓 */}
+        {/* 手機直排，電腦橫排 */}
         <div className="flex flex-col sm:flex-row gap-3 max-w-xl mx-auto">
           <input 
             value={topic}
@@ -242,7 +236,7 @@ const Podcast = () => {
             placeholder="例如：慢性腎臟病飲食原則"
             className="flex-1 px-5 py-3 bg-white border border-gray-200 text-gray-700 shadow-sm rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none placeholder-gray-400"
           />
-          {/* 🛠️ 修改: 手機版 w-full，電腦版 w-auto */}
+          {/* 手機版 w-full，電腦版 w-auto */}
           <Button 
             onClick={handleGenerate} 
             disabled={loading} 
@@ -258,7 +252,11 @@ const Podcast = () => {
         <div className="animate-fade-in space-y-6">
           <Card className="bg-gradient-to-br from-purple-50 to-white border-purple-100">
             <h3 className="text-lg font-bold text-purple-900 mb-4 flex items-center gap-2">
-              <span>▶️</span> 現正播放：{topic}
+              <span><img 
+            src={playImg} 
+            alt="播放" 
+            className="w-20 h-20 object-contain" 
+          /></span> 現正播放：{topic}
             </h3>
             <audio controls src={data.audioUrl} className="w-full" />
             <div className="mt-4 text-right">
