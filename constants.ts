@@ -3,10 +3,8 @@ export const APP_NAME = "KidneyCare AI";
 export const GEMINI_MODEL_FLASH = 'gemini-2.5-flash';
 export const GEMINI_MODEL_TTS = 'gemini-2.5-flash-preview-tts';
 
-// 匯整自使用者提供的三本衛教手冊 PDF OCR 內容
-// 來源1：慢性腎臟病健康管理手冊
-// 來源2：早期慢性腎臟病照護手冊
-// 來源3：慢性腎臟病綜合護理與飲食管理臨床指引 (包含 KDIGO 2024 最新建議)
+// 匯整自使用者提供的一本衛教手冊 PDF OCR 內容
+// 來源：慢性腎臟病綜合護理與飲食管理臨床指引 (包含 KDIGO 2024 最新建議)由Gemini DeepResearch生成
 export const KIDNEY_KNOWLEDGE_BASE = `
 【慢性腎臟病 (CKD) 全方位專業衛教資料庫】
 
