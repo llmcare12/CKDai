@@ -43,7 +43,7 @@ const Home = () => (
       </h1>
       <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
         腎臟科臨床護理教育中，指引與衛教文件內容繁雜且專業性高。
-        本平台利用 <span className="text-blue-600 font-bold">AI 大型語言模型</span> 與多媒體生成技術，
+        本平台利用 <span className="text-blue-600 font-bold">Gemini Ai</span> 與多媒體生成技術，
         將複雜的衛教文件轉換為易懂的互動素材。
       </p>
       <div className="flex justify-center gap-4 pt-4">
