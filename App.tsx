@@ -95,8 +95,8 @@ const Home = () => (
 
       {/* 卡片 4 */}
       <Link to="/qna" className="group">
-        <div className="aspect-square bg-white p-6 rounded-2xl shadow-md border border-gray-100 hover:shadow-xl transition-all duration-300 h-full hover:-translate-y-1">
-          <div className="mb-4 group-hover:scale-110 transition-transform duration-300 flex justify-center item-center">
+        <div className="aspect-square bg-white p-6 rounded-2xl shadow-md border border-gray-100 hover:shadow-xl transition-all duration-300 h-full hover:-translate-y-1 item-center">
+          <div className="mb-4 group-hover:scale-110 transition-transform duration-300 flex justify-center">
             <img src={qnaImg} alt="QnA" className="w-32 h-32 object-contain" />
           </div>
           <h3 className="text-xl font-bold text-gray-800 mb-2">腎臟病Q&A</h3>
