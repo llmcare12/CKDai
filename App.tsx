@@ -58,7 +58,7 @@ const Home = () => (
       
       {/* 卡片 1 */}
       <Link to="/summary" className="group">
-        <div className="aspect-square bg-white p-6 rounded-2xl shadow-md border border-gray-100 hover:shadow-xl transition-all duration-300 h-full hover:-translate-y-1">
+        <div className="aspect-square md:aspect-auto bg-white p-6 rounded-2xl shadow-md border border-gray-100 hover:shadow-xl transition-all duration-300 h-full hover:-translate-y-1">
           <div className="mb-4 group-hover:scale-110 transition-transform duration-300 flex justify-center">
             <img src={robotImg} alt="AI摘要" className="w-32 h-32 object-contain" />
           </div>
@@ -69,7 +69,7 @@ const Home = () => (
 
       {/* 卡片 2 */}
       <Link to="/podcast" className="group">
-        <div className="aspect-square bg-white p-6 rounded-2xl shadow-md border border-gray-100 hover:shadow-xl transition-all duration-300 h-full hover:-translate-y-1">
+        <div className="aspect-square md:aspect-auto bg-white p-6 rounded-2xl shadow-md border border-gray-100 hover:shadow-xl transition-all duration-300 h-full hover:-translate-y-1">
           <div className="mb-4 group-hover:scale-110 transition-transform duration-300 flex justify-center">
             <img src={podcastImg} alt="衛教Podcast" className="w-32 h-32 object-contain" />
           </div>
@@ -80,7 +80,7 @@ const Home = () => (
 
       {/* 卡片 3 */}
       <Link to="/mindmap" className="group">
-        <div className="aspect-square bg-white p-6 rounded-2xl shadow-md border border-gray-100 hover:shadow-xl transition-all duration-300 h-full hover:-translate-y-1">
+        <div className="aspect-square md:aspect-auto bg-white p-6 rounded-2xl shadow-md border border-gray-100 hover:shadow-xl transition-all duration-300 h-full hover:-translate-y-1">
           <div className="mb-4 group-hover:scale-110 transition-transform duration-300 flex justify-center">
             <img src={brainImg} alt="心智圖" className="w-32 h-32 object-contain" />
           </div>
@@ -91,7 +91,7 @@ const Home = () => (
 
       {/* 卡片 4 */}
       <Link to="/qna" className="group">
-        <div className="aspect-square bg-white p-6 rounded-2xl shadow-md border border-gray-100 hover:shadow-xl transition-all duration-300 h-full hover:-translate-y-1">
+        <div className="aspect-square md:aspect-auto bg-white p-6 rounded-2xl shadow-md border border-gray-100 hover:shadow-xl transition-all duration-300 h-full hover:-translate-y-1">
           <div className="mb-4 group-hover:scale-110 transition-transform duration-300 flex justify-center">
             <img src={qnaImg} alt="QnA" className="w-32 h-32 object-contain" />
           </div>
