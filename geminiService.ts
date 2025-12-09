@@ -149,42 +149,8 @@ export const generateMindMapData = async (topic: string): Promise<MindMapNode> =
   }
 };
 
-// 4. Q&A Generation
-export const generateQnAList = async (): Promise<QnAItem[]> => {
-  const ai = getClient();
 
-  const response = await ai.models.generateContent({
-    model: GEMINI_MODEL_FLASH,
-    contents: `請分析以下衛教資料，列出 10 個腎臟病患者最常感到困惑或最常問的問題，並提供解答。
-    
-    資料來源：
-    ${KIDNEY_KNOWLEDGE_BASE}
-    
-    要求：
-    1. 問題要切中痛點 (例如：洗腎會不會死？可以吃香蕉嗎？)。
-    2. 解答要根據資料庫，淺顯易懂，具安撫性。
-    3. 回傳 JSON 格式 (Array of objects)。
-    4. 不要使用 Markdown 粗體語法 (**)。
-    5. 使用繁體中文生成`,
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            question: { type: Type.STRING },
-            answer: { type: Type.STRING }
-          }
-        }
-      }
-    }
-  });
 
-  const jsonStr = response.text;
-  if (!jsonStr) return [];
-  return JSON.parse(jsonStr) as QnAItem[];
-};
 
 // --- Audio Helper Functions (Raw PCM to WAV) ---
 function decode(base64: string): Uint8Array {
