@@ -11,7 +11,7 @@ const colorScale = d3.scaleOrdinal<string>()
   .domain(["0", "1", "2", "3", "4"])
   .range(["#1e3a8a", "#2563eb", "#3b82f6", "#60a5fa", "#93c5fd"]);
 
-// 🛠️ 智慧平衡切字串函式
+
 // 1. 最多只要兩行
 // 2. 如果少於20字就不用換行
 const splitString = (str: string) => {
@@ -69,7 +69,6 @@ const MindMapGraph: React.FC<MindMapGraphProps> = ({ data }) => {
     root.y0 = 0;
 
     // 調整節點間距
-    // 🛠️ 修改 1: 垂直間距從 90 改為 60 (讓上下緊湊一點)
     const tree = d3.tree().nodeSize([60, 220]); 
 
     update(root);
@@ -79,8 +78,7 @@ const MindMapGraph: React.FC<MindMapGraphProps> = ({ data }) => {
       const nodes = treeData.descendants();
       const links = treeData.links();
 
-      // 🛠️ 修改 2: 水平間距從 320 改為 250 (讓左右緊湊一點)
-      // 雖然長文字有 20 字，但 250 應該是大部分情況下的甜蜜點
+
       nodes.forEach((d: any) => { d.y = d.depth * 250; });
 
       // ****************** Nodes section ***************************
