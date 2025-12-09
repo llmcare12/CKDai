@@ -62,7 +62,7 @@ export const generateChatResponse = async (
 export const generatePodcastAudio = async (topic: string): Promise<{ audioUrl: string, script: string }> => {
   const ai = getClient();
 
-  // Step 1: Generate Script
+  // Step 1: 生成逐字稿
   const scriptResponse = await ai.models.generateContent({
     model: GEMINI_MODEL_FLASH,
     contents: `請根據以下衛教資料，為主題「${topic}」撰寫一份 Podcast 廣播腳本。
@@ -84,7 +84,7 @@ export const generatePodcastAudio = async (topic: string): Promise<{ audioUrl: s
 
   const scriptText = scriptResponse.text || "無法生成腳本，請稍後再試。";
 
-  // Step 2: Generate Audio using TTS
+  // Step 2: 用TTS轉語音
   const audioResponse = await ai.models.generateContent({
     model: GEMINI_MODEL_TTS,
     contents: [{ parts: [{ text: scriptText }] }],
@@ -105,19 +105,18 @@ export const generatePodcastAudio = async (topic: string): Promise<{ audioUrl: s
   }
 
   const audioBuffer = decode(base64Audio);
-  const wavBytes = createWavFile(audioBuffer, 24000, 1); // 24kHz mono is standard for this model
+  const wavBytes = createWavFile(audioBuffer, 24000, 1); 
   const blob = new Blob([wavBytes], { type: 'audio/wav' });
   const audioUrl = URL.createObjectURL(blob);
 
   return { audioUrl, script: scriptText };
 };
 
-// 3. Mind Map Data Generation
+// 3. 心智圖資料生成
 export const generateMindMapData = async (topic: string): Promise<MindMapNode> => {
   const ai = getClient();
 
-  // We remove strict schema validation here to allow for deeper nesting and rely on text parsing
-  // because schema often limits recursion depth or flexibility.
+
   const response = await ai.models.generateContent({
     model: GEMINI_MODEL_FLASH,
     contents: `請根據以下衛教資料，針對主題「${topic}」製作一個心智圖結構。
