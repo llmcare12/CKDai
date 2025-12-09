@@ -398,7 +398,7 @@ const Navbar = () => {
           <span className="text-xl font-bold text-gray-800 tracking-tight">{APP_NAME}</span>
         </Link>
         
-        {/* Desktop Menu */}
+        {/* 電腦目錄 */}
         <div className="hidden md:flex space-x-1">
           {links.map(link => {
             const isActive = location.pathname === link.path;
@@ -418,7 +418,7 @@ const Navbar = () => {
           })}
         </div>
 
-        {/* Mobile Menu Button */}
+        {/* 手機的目錄 */}
         <button 
             className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
