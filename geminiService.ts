@@ -93,7 +93,7 @@ export const generatePodcastAudio = async (topic: string): Promise<{ audioUrl: s
       responseModalities: [Modality.AUDIO],
       speechConfig: {
         voiceConfig: {
-          prebuiltVoiceConfig: { voiceName: 'Kore' }, // Kore is typically female-sounding
+          prebuiltVoiceConfig: { voiceName: 'Charon' }, // Kore is typically female-sounding
         },
       },
     },
