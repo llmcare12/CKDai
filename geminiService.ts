@@ -2,7 +2,7 @@ import { GoogleGenAI, Modality } from "@google/genai";
 import { 
   GEMINI_MODEL_FLASH, 
   GEMINI_MODEL_TTS, 
-  RAG_KNOWLEDGE_DB, // 記得確認 constants.ts 有 export 這三個
+  RAG_KNOWLEDGE_DB, 
   FIXED_QNA_LIST,
   KnowledgeItem 
 } from "./constants";
@@ -26,10 +26,10 @@ const cleanJson = (text: string): string => {
 };
 
 // ==========================================
-// RAG 核心工具函式 (放在同一檔案方便呼叫)
+// RAG 核心工具函式
 // ==========================================
 
-// 1. 固定問答精準匹配 (優先級最高，省 Token)
+// 1. 固定問答精準匹配
 function findFixedAnswer(query: string): string | null {
   const target = FIXED_QNA_LIST.find(item => 
     item.question.includes(query) || query.includes(item.question)
@@ -37,18 +37,18 @@ function findFixedAnswer(query: string): string | null {
   return target ? target.answer : null;
 }
 
-// 2. 模糊檢索 (找出最相關的知識片段)
+// 2. 模糊檢索
 function retrieveContext(query: string, topK: number = 3): KnowledgeItem[] {
   const lowerQuery = query.toLowerCase();
   
   // 簡易計分機制
   const scoredData = RAG_KNOWLEDGE_DB.map(item => {
     let score = 0;
-    if (item.topic.includes(query)) score += 10;          // 標題命中權重最高
-    if (item.content.includes(query)) score += 5;         // 內容命中
-    if (item.summary.includes(query)) score += 3;         // 摘要命中
+    if (item.topic.includes(query)) score += 10;
+    if (item.content.includes(query)) score += 5;
+    if (item.summary.includes(query)) score += 3;
     const keywordMatch = item.keywords.some(k => lowerQuery.includes(k.toLowerCase()));
-    if (keywordMatch) score += 8;                         // 關鍵字命中
+    if (keywordMatch) score += 8;
 
     return { item, score };
   });
@@ -61,9 +61,9 @@ function retrieveContext(query: string, topK: number = 3): KnowledgeItem[] {
     .map(d => d.item);
 }
 
-// 3. 將檢索到的資料轉為文字 Prompt
+// 3. 將檢索到的資料轉為文字 Prompt (移除之前的「一般常識」備註)
 function formatContextToPrompt(items: KnowledgeItem[]): string {
-  if (items.length === 0) return "目前資料庫中無直接相關資訊，請基於一般醫學常識回答，並提醒使用者諮詢醫師。";
+  // 這裡不需要處理空陣列，因為會在主程式先攔截
   return items.map((item, idx) => `
   [資料 ${idx + 1}]
   主題：${item.topic}
@@ -77,22 +77,27 @@ function formatContextToPrompt(items: KnowledgeItem[]): string {
 // 主要 Service 功能
 // ==========================================
 
-// 1. AI 摘要，聊天機器人 (RAG 增強版)
+// 1. AI 摘要，聊天機器人 (嚴格限制版)
 export const generateChatResponse = async (
   userMessage: string, 
   history: { role: string; content: string }[]
 ): Promise<string> => {
   
-  // Step A: 先檢查固定問答 (秒回，不消耗 API)
+  // Step A: 先檢查固定問答
   const fixedAns = findFixedAnswer(userMessage);
   if (fixedAns) {
-    return fixedAns; // 直接回傳，不呼叫 Gemini
+    return fixedAns;
   }
 
   // Step B: 執行 RAG 檢索
-  const retrievedItems = retrieveContext(userMessage, 4); // 抓取前 4 筆最相關
-  const contextPrompt = formatContextToPrompt(retrievedItems);
+  const retrievedItems = retrieveContext(userMessage, 4);
 
+  // 【嚴格限制邏輯 1】：如果關鍵字搜尋不到任何結果，直接拒絕，不浪費 API
+  if (retrievedItems.length === 0) {
+    return "我的資料庫裡沒有資料";
+  }
+
+  const contextPrompt = formatContextToPrompt(retrievedItems);
   const ai = getClient();
   
   // Step C: 呼叫 Gemini
@@ -106,53 +111,64 @@ export const generateChatResponse = async (
       { role: 'user', parts: [{ text: userMessage }] }
     ],
     config: {
-      systemInstruction: `你是一位專業、親切的腎臟病衛教 AI 助理。
+      // 【嚴格限制邏輯 2】：透過 System Instruction 強制 AI 閉嘴
+      systemInstruction: `你是一位嚴格遵守資料邊界的腎臟病衛教助理。
       
       任務：
-      根據以下的【檢索到的衛教資料】回答使用者的問題。
+      僅根據以下的【檢索資料】回答使用者的問題。
       
-      【檢索到的衛教資料】：
+      【檢索資料】：
       ${contextPrompt}
       
-      回答原則：
-      1. 優先依據上述資料回答。
-      2. 用語淺顯易懂，語氣溫暖、具備同理心。
-      3. 內容必須基於參考資料，不要憑空捏造數據。
-      4. **絕對不要使用 Markdown 的粗體語法 (如 **文字**)，請使用純文字排版。**`,
+      回答原則 (最高指令)：
+      1. **只能** 使用上述提供的資料來回答。
+      2. **絕對禁止** 補充資料庫以外的任何知識（即使你知道答案，只要資料庫沒寫，就當作不知道）。
+      3. 如果上述資料不足以回答使用者的問題，請直接回答：「我的資料庫裡沒有資料」。
+      4. 不要說「根據資料庫...」，直接回答內容即可。
+      5. 不要使用 Markdown 粗體。`,
     }
   });
 
-  return response.text || "抱歉，我現在無法回答，請稍後再試。";
+  const text = response.text || "";
+  
+  // 雙重保險：如果 AI 還是忍不住講了廢話但其實沒內容，可以考慮在這裡做二次檢查
+  // 但通常 Prompt 夠強就可以擋住
+  return text;
 };
 
-// 2. 語音生成 (RAG 增強版)
+// 2. 語音生成 (嚴格限制版)
 export const generatePodcastAudio = async (topic: string): Promise<{ audioUrl: string, script: string }> => {
   const ai = getClient();
 
-  // 針對主題檢索資料 (Podcast 需要較多素材，我們抓取前 6 筆)
+  // 檢索資料
   const retrievedItems = retrieveContext(topic, 6);
+
+  // 【嚴格限制】：如果沒有素材，無法生成 Podcast
+  if (retrievedItems.length === 0) {
+    // 這裡拋出錯誤，讓前端去接住並顯示 Alert
+    throw new Error("我的資料庫裡沒有關於此主題的資料，無法生成 Podcast。");
+  }
+
   const contextPrompt = formatContextToPrompt(retrievedItems);
 
   // Step 1: 生成逐字稿
   const scriptResponse = await ai.models.generateContent({
     model: GEMINI_MODEL_FLASH,
-    contents: `請根據以下檢索到的衛教資料，為主題「${topic}」撰寫一份 Podcast 廣播腳本。
+    contents: `請根據以下衛教資料，為主題「${topic}」撰寫 Podcast 腳本。
     
-    參考資料：
+    資料來源：
     ${contextPrompt}
     
-    要求：
-    1. 長度約 500 字 (口語朗讀約 2-3 分鐘)。
-    2. 角色：一位親切、活潑的男性來自「台北榮總」的資深腎臟病衛教個管師，名字叫小榮。
-    3. 語氣：非常口語化、輕鬆、溫暖。多用「大家知道嗎？」、「其實呀...」這類語助詞。
-    4. 內容必須基於參考資料，不要憑空捏造數據。
-    5. 輸出格式：純文字腳本，不要包含 [音樂]、(笑聲) 等標記。
-    6. 使用繁體中文。`,
+    嚴格要求：
+    1. **內容必須 100% 來自上述資料來源**，絕對不可自行腦補或添加外部資訊。
+    2. 如果資料來源的資訊量不足以寫成 500 字腳本，請就現有資料撰寫即可，不要硬湊。
+    3. 角色：親切的個管師小榮。
+    4. 輸出純文字腳本，無標記。`,
   });
 
-  const scriptText = scriptResponse.text || "無法生成腳本，請稍後再試。";
+  const scriptText = scriptResponse.text || "無法生成腳本。";
 
-  // Step 2: 用TTS轉語音
+  // Step 2: TTS
   const audioResponse = await ai.models.generateContent({
     model: GEMINI_MODEL_TTS,
     contents: [{ parts: [{ text: scriptText }] }],
@@ -180,28 +196,30 @@ export const generatePodcastAudio = async (topic: string): Promise<{ audioUrl: s
   return { audioUrl, script: scriptText };
 };
 
-// 3. 心智圖資料生成 (RAG 增強版)
+// 3. 心智圖資料生成 (嚴格限制版)
 export const generateMindMapData = async (topic: string): Promise<MindMapNode> => {
   const ai = getClient();
 
-  // 針對主題檢索資料
   const retrievedItems = retrieveContext(topic, 5);
+
+  // 【嚴格限制】：沒有資料就不做圖
+  if (retrievedItems.length === 0) {
+    throw new Error("我的資料庫裡沒有關於此主題的資料，無法生成心智圖。");
+  }
+
   const contextPrompt = formatContextToPrompt(retrievedItems);
 
   const response = await ai.models.generateContent({
     model: GEMINI_MODEL_FLASH,
-    contents: `請根據以下衛教資料，針對主題「${topic}」製作一個心智圖結構。
+    contents: `請根據以下資料，製作主題「${topic}」的心智圖 JSON。
     
-    參考資料：
+    資料來源：
     ${contextPrompt}
     
-    要求：
-    1. 僅使用上述資料庫內的資訊。
-    2. 請回傳一個標準的 JSON 物件。
-    3. 根節點 (Root) 是主題名稱：${topic}。
-    4. 每個節點結構必須包含 'name' (字串) 和 'children' (陣列)。
-    5. 層次分明，至少 3 層結構。
-    6. 不要包含任何 Markdown 標記，只回傳純 JSON 字串。`,
+    嚴格要求：
+    1. **僅使用** 資料來源內的資訊建立節點。
+    2. 若資料不足，請僅列出已知的部分，不要編造。
+    3. 回傳標準 JSON 格式。`,
     config: {
       responseMimeType: "application/json"
     }
@@ -215,11 +233,11 @@ export const generateMindMapData = async (topic: string): Promise<MindMapNode> =
     return JSON.parse(cleanStr) as MindMapNode;
   } catch (e) {
     console.error("JSON Parse Error:", e, jsonStr);
-    throw new Error("無法解析心智圖資料，請重試。");
+    throw new Error("無法解析心智圖資料。");
   }
 };
 
-// --- Audio Helper Functions (Raw PCM to WAV) ---
+// --- Audio Helper Functions ---
 function decode(base64: string): Uint8Array {
   const binaryString = atob(base64);
   const len = binaryString.length;
@@ -240,7 +258,7 @@ function createWavFile(samples: Uint8Array, sampleRate: number, numChannels: num
     writeString(view, 8, 'WAVE');
     writeString(view, 12, 'fmt ');
     view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true); // PCM
+    view.setUint16(20, 1, true); 
     view.setUint16(22, numChannels, true);
     view.setUint32(24, sampleRate, true);
     view.setUint32(28, sampleRate * numChannels * 2, true);
