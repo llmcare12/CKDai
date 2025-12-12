@@ -29,7 +29,22 @@ const cleanJson = (text: string): string => {
 // RAG 核心工具函式
 // ==========================================
 
-// 1. 固定問答精準匹配
+// ==========================================
+// 使用者健康檔案介面 (全方位判斷依據)
+// ==========================================
+export interface UserProfile {
+  name?: string;         // 暱稱
+  eGFR?: number;         // 腎絲球過濾率 (判斷分期核心)
+  stage?: string;        // CKD 分期 (如 "3b", "5", "HD", "PD")
+  hasDiabetes?: boolean; // 糖尿病 (影響視網膜、神經、血糖控制建議)
+  hasHypertension?: boolean; // 高血壓 (影響運動、水分、藥物建議)
+  isDialysis?: boolean;  // 是否已洗腎 (關鍵分水嶺：飲食與限水規則完全不同)
+}
+
+// ==========================================
+// RAG 核心工具函式
+// ==========================================
+
 function findFixedAnswer(query: string): string | null {
   const target = FIXED_QNA_LIST.find(item => 
     item.question.includes(query) || query.includes(item.question)
@@ -37,11 +52,9 @@ function findFixedAnswer(query: string): string | null {
   return target ? target.answer : null;
 }
 
-// 2. 模糊檢索
 function retrieveContext(query: string, topK: number = 3): KnowledgeItem[] {
   const lowerQuery = query.toLowerCase();
   
-  // 簡易計分機制
   const scoredData = RAG_KNOWLEDGE_DB.map(item => {
     let score = 0;
     if (item.topic.includes(query)) score += 10;
@@ -60,45 +73,59 @@ function retrieveContext(query: string, topK: number = 3): KnowledgeItem[] {
     .map(d => d.item);
 }
 
-// 3. 將檢索到的資料轉為文字 Prompt
 function formatContextToPrompt(items: KnowledgeItem[]): string {
   return items.map((item, idx) => `
-  [資料 ${idx + 1}]
+  [衛教資料 ${idx + 1}]
   主題：${item.topic}
   摘要：${item.summary}
   內容：${item.content}
   `).join('\n---\n');
 }
 
-
 // ==========================================
 // 主要 Service 功能
 // ==========================================
 
-// 1. AI 摘要，聊天機器人 (溫暖譬喻版)
+// 1. AI 全方位衛教機器人
 export const generateChatResponse = async (
   userMessage: string, 
-  history: { role: string; content: string }[]
+  history: { role: string; content: string }[],
+  userProfile?: UserProfile // 接收使用者全身數據
 ): Promise<string> => {
   
-  // Step A: 先檢查固定問答
+  // Step A: 檢查固定問答 (秒回)
   const fixedAns = findFixedAnswer(userMessage);
   if (fixedAns) {
     return fixedAns;
   }
 
-  // Step B: 執行 RAG 檢索
-  const retrievedItems = retrieveContext(userMessage, 4);
+  // Step B: RAG 檢索 (移除原本強制加 "飲食" 的邏輯，改為廣泛搜尋)
+  // 我們讓搜尋引擎根據問題自然去匹配 (包含症狀、藥物、護理知識)
+  const retrievedItems = retrieveContext(userMessage, 5); 
 
-  // 【嚴格但有禮貌】：如果完全沒資料，回傳客氣的拒絕訊息
+  // 若完全無資料，才回傳預設訊息
   if (retrievedItems.length === 0) {
-    return "不好意思，目前的衛教資料庫中沒有提到這部分的資訊。為了您的健康著想，建議您直接諮詢您的主治醫師或護理師，以獲得最準確的建議喔！";
+    return "不好意思，目前的衛教資料庫中沒有提到這部分的詳細資訊。腎臟病的狀況比較複雜，為了您的安全，建議您將這個問題記錄下來，下次門診時諮詢您的主治醫師或個管師喔！";
   }
 
   const contextPrompt = formatContextToPrompt(retrievedItems);
+  
+  // 建立使用者狀況 Prompt
+  let userProfilePrompt = "使用者目前未提供詳細身體數值，請給予通用的衛教建議。";
+  if (userProfile) {
+    userProfilePrompt = `
+    【使用者健康檔案 (請據此調整回答策略)】：
+    - 暱稱：${userProfile.name || "病友"}
+    - 腎功能 (eGFR)：${userProfile.eGFR ? userProfile.eGFR : "未知"}
+    - CKD 分期：${userProfile.stage ? `第 ${userProfile.stage} 期` : "未知"}
+    - 透析狀況：${userProfile.isDialysis ? "已開始透析 (洗腎)" : "未透析"}
+    - 共病症：${userProfile.hasDiabetes ? "有糖尿病" : ""} ${userProfile.hasHypertension ? "有高血壓" : ""}
+    `;
+  }
+
   const ai = getClient();
   
-  // Step C: 呼叫 Gemini
+  // Step C: 呼叫 Gemini (全方位衛教版 Prompt)
   const response = await ai.models.generateContent({
     model: GEMINI_MODEL_FLASH,
     contents: [
@@ -109,22 +136,37 @@ export const generateChatResponse = async (
       { role: 'user', parts: [{ text: userMessage }] }
     ],
     config: {
-      // 【修改重點】：要求譬喻、口語化、去術語化
-      systemInstruction: `你是一位親切、溫暖且善於解說的腎臟病衛教助理。
+      systemInstruction: `你是一位專業、溫暖且全方位的腎臟病衛教個管師「小榮」。
+      你的職責不只是飲食建議，還包含症狀解讀、藥物安全、併發症預防及心理支持。
       
-      你的任務是根據【檢索資料】來回答使用者的問題。
+      請結合【檢索衛教資料】與【使用者健康檔案】，提供最貼切的個人化建議。
+
+      ${userProfilePrompt}
       
-      【檢索資料】：
+      【檢索到的衛教資料庫】：
       ${contextPrompt}
       
       【回答最高指導原則】：
-      1. **善用譬喻**：請將生硬的醫學概念轉化為生活中的例子。
-         (例如：把「腎絲球過濾率」比喻成「腎臟電池剩下的電力」或「濾水器的濾心效率」)。
-      2. **白話親切**：像是在跟鄰居長輩聊天一樣，不要使用艱澀的專業術語。如果資料中有術語，請用白話文解釋它。
-      3. **語句通順**：你可以適度補充連接詞或語助詞（如：其實、簡單來說、別擔心），讓對話更自然流暢，不要像機器人唸稿。
-      4. **嚴守事實**：你的「譬喻」和「解釋」必須建立在檢索資料的事實基礎上。**絕對不能**無中生有或捏造資料庫裡沒寫的醫學建議。
-      5. **無資料處理**：如果檢索到的資料無法回答使用者的問題，請客氣地說：「不好意思，目前的資料庫裡沒有這方面的詳細資訊，建議諮詢醫師。」
-      6. **排版**：請使用純文字，不要用 Markdown 粗體。`,
+      1. **全人照護觀點**：
+         - **判斷分期**：回答任何問題前，先看使用者的分期。
+           (例：第 1-2 期重點在控制三高；第 3b-5 期重點在預防併發症與飲食限制；透析患者重點在瘻管照護與營養補充)。
+         - **共病考量**：若使用者有糖尿病，解釋症狀時（如泡泡尿、視力模糊）要考慮高血糖的影響。若有高血壓，給予生活建議時要強調血壓控制。
+      
+      2. **生活化譬喻 (Metaphor)**：
+         - 請將醫學原理轉化為生活常識。
+         - 例：「腎臟像人體的淨水場」、「高血壓像水管壓力太大」、「尿毒素像家裡沒倒的垃圾」。
+      
+      3. **同理心與溫暖**：
+         - 腎臟病友常感到焦慮，請用鼓勵的語氣：「其實只要控制好，生活還是可以很精彩的」、「別擔心，我們一起來看看怎麼做」。
+      
+      4. **嚴守資料邊界**：
+         - 你的建議必須基於【檢索衛教資料】。
+         - 若使用者問及資料庫未記載的特定藥物或療法，請誠實告知並建議就醫，不可自行腦補。
+      
+      5. **多面向解析**：
+         - 如果使用者問「我最近頭暈」，不要只回答一種可能。請根據資料庫檢查是否與「貧血」、「低血壓 (透析後)」、「高血壓」或「藥物副作用」有關，並提示使用者注意哪些警訊。
+
+      6. **排版**：請使用純文字，保持版面乾淨，不要用 Markdown 粗體。`,
     }
   });
 
