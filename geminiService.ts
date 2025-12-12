@@ -2,7 +2,7 @@ import { GoogleGenAI, Modality } from "@google/genai";
 import { 
   GEMINI_MODEL_FLASH, 
   GEMINI_MODEL_TTS, 
-  RAG_KNOWLEDGE_DB, 
+  RAG_KNOWLEDGE_DB, // 記得確認 constants.ts 有 export 這三個
   FIXED_QNA_LIST,
   KnowledgeItem 
 } from "./constants";
@@ -26,25 +26,10 @@ const cleanJson = (text: string): string => {
 };
 
 // ==========================================
-// RAG 核心工具函式
+// RAG 核心工具函式 (放在同一檔案方便呼叫)
 // ==========================================
 
-// ==========================================
-// 使用者健康檔案介面 (全方位判斷依據)
-// ==========================================
-export interface UserProfile {
-  name?: string;         // 暱稱
-  eGFR?: number;         // 腎絲球過濾率 (判斷分期核心)
-  stage?: string;        // CKD 分期 (如 "3b", "5", "HD", "PD")
-  hasDiabetes?: boolean; // 糖尿病 (影響視網膜、神經、血糖控制建議)
-  hasHypertension?: boolean; // 高血壓 (影響運動、水分、藥物建議)
-  isDialysis?: boolean;  // 是否已洗腎 (關鍵分水嶺：飲食與限水規則完全不同)
-}
-
-// ==========================================
-// RAG 核心工具函式
-// ==========================================
-
+// 1. 固定問答精準匹配 (優先級最高，省 Token)
 function findFixedAnswer(query: string): string | null {
   const target = FIXED_QNA_LIST.find(item => 
     item.question.includes(query) || query.includes(item.question)
@@ -52,20 +37,23 @@ function findFixedAnswer(query: string): string | null {
   return target ? target.answer : null;
 }
 
+// 2. 模糊檢索 (找出最相關的知識片段)
 function retrieveContext(query: string, topK: number = 3): KnowledgeItem[] {
   const lowerQuery = query.toLowerCase();
   
+  // 簡易計分機制
   const scoredData = RAG_KNOWLEDGE_DB.map(item => {
     let score = 0;
-    if (item.topic.includes(query)) score += 10;
-    if (item.content.includes(query)) score += 5;
-    if (item.summary.includes(query)) score += 3;
+    if (item.topic.includes(query)) score += 10;          // 標題命中權重最高
+    if (item.content.includes(query)) score += 5;         // 內容命中
+    if (item.summary.includes(query)) score += 3;         // 摘要命中
     const keywordMatch = item.keywords.some(k => lowerQuery.includes(k.toLowerCase()));
-    if (keywordMatch) score += 8;
+    if (keywordMatch) score += 8;                         // 關鍵字命中
 
     return { item, score };
   });
 
+  // 過濾掉沒分數的，由高分排到低分，取前 K 筆
   return scoredData
     .filter(d => d.score > 0)
     .sort((a, b) => b.score - a.score)
@@ -73,59 +61,41 @@ function retrieveContext(query: string, topK: number = 3): KnowledgeItem[] {
     .map(d => d.item);
 }
 
+// 3. 將檢索到的資料轉為文字 Prompt
 function formatContextToPrompt(items: KnowledgeItem[]): string {
+  if (items.length === 0) return "目前資料庫中無直接相關資訊，請基於一般醫學常識回答，並提醒使用者諮詢醫師。";
   return items.map((item, idx) => `
-  [衛教資料 ${idx + 1}]
+  [資料 ${idx + 1}]
   主題：${item.topic}
   摘要：${item.summary}
   內容：${item.content}
   `).join('\n---\n');
 }
 
+
 // ==========================================
 // 主要 Service 功能
 // ==========================================
 
-// 1. AI 全方位衛教機器人
+// 1. AI 摘要，聊天機器人 (RAG 增強版)
 export const generateChatResponse = async (
   userMessage: string, 
-  history: { role: string; content: string }[],
-  userProfile?: UserProfile // 接收使用者全身數據
+  history: { role: string; content: string }[]
 ): Promise<string> => {
   
-  // Step A: 檢查固定問答 (秒回)
+  // Step A: 先檢查固定問答 (秒回，不消耗 API)
   const fixedAns = findFixedAnswer(userMessage);
   if (fixedAns) {
-    return fixedAns;
+    return fixedAns; // 直接回傳，不呼叫 Gemini
   }
 
-  // Step B: RAG 檢索 (移除原本強制加 "飲食" 的邏輯，改為廣泛搜尋)
-  // 我們讓搜尋引擎根據問題自然去匹配 (包含症狀、藥物、護理知識)
-  const retrievedItems = retrieveContext(userMessage, 5); 
-
-  // 若完全無資料，才回傳預設訊息
-  if (retrievedItems.length === 0) {
-    return "不好意思，目前的衛教資料庫中沒有提到這部分的詳細資訊。腎臟病的狀況比較複雜，為了您的安全，建議您將這個問題記錄下來，下次門診時諮詢您的主治醫師或個管師喔！";
-  }
-
+  // Step B: 執行 RAG 檢索
+  const retrievedItems = retrieveContext(userMessage, 4); // 抓取前 4 筆最相關
   const contextPrompt = formatContextToPrompt(retrievedItems);
-  
-  // 建立使用者狀況 Prompt
-  let userProfilePrompt = "使用者目前未提供詳細身體數值，請給予通用的衛教建議。";
-  if (userProfile) {
-    userProfilePrompt = `
-    【使用者健康檔案 (請據此調整回答策略)】：
-    - 暱稱：${userProfile.name || "病友"}
-    - 腎功能 (eGFR)：${userProfile.eGFR ? userProfile.eGFR : "未知"}
-    - CKD 分期：${userProfile.stage ? `第 ${userProfile.stage} 期` : "未知"}
-    - 透析狀況：${userProfile.isDialysis ? "已開始透析 (洗腎)" : "未透析"}
-    - 共病症：${userProfile.hasDiabetes ? "有糖尿病" : ""} ${userProfile.hasHypertension ? "有高血壓" : ""}
-    `;
-  }
 
   const ai = getClient();
   
-  // Step C: 呼叫 Gemini (全方位衛教版 Prompt)
+  // Step C: 呼叫 Gemini
   const response = await ai.models.generateContent({
     model: GEMINI_MODEL_FLASH,
     contents: [
@@ -136,76 +106,53 @@ export const generateChatResponse = async (
       { role: 'user', parts: [{ text: userMessage }] }
     ],
     config: {
-      systemInstruction: `你是一位專業、溫暖且全方位的腎臟病衛教個管師「小榮」。
-      你的職責不只是飲食建議，還包含症狀解讀、藥物安全、併發症預防及心理支持。
+      systemInstruction: `你是一位專業、親切的腎臟病衛教 AI 助理。
       
-      請結合【檢索衛教資料】與【使用者健康檔案】，提供最貼切的個人化建議。
-
-      ${userProfilePrompt}
+      任務：
+      根據以下的【檢索到的衛教資料】回答使用者的問題。
       
-      【檢索到的衛教資料庫】：
+      【檢索到的衛教資料】：
       ${contextPrompt}
       
-      【回答最高指導原則】：
-      1. **全人照護觀點**：
-         - **判斷分期**：回答任何問題前，先看使用者的分期。
-           (例：第 1-2 期重點在控制三高；第 3b-5 期重點在預防併發症與飲食限制；透析患者重點在瘻管照護與營養補充)。
-         - **共病考量**：若使用者有糖尿病，解釋症狀時（如泡泡尿、視力模糊）要考慮高血糖的影響。若有高血壓，給予生活建議時要強調血壓控制。
-      
-      2. **生活化譬喻 (Metaphor)**：
-         - 請將醫學原理轉化為生活常識。
-         - 例：「腎臟像人體的淨水場」、「高血壓像水管壓力太大」、「尿毒素像家裡沒倒的垃圾」。
-      
-      3. **同理心與溫暖**：
-         - 腎臟病友常感到焦慮，請用鼓勵的語氣：「其實只要控制好，生活還是可以很精彩的」、「別擔心，我們一起來看看怎麼做」。
-      
-      4. **嚴守資料邊界**：
-         - 你的建議必須基於【檢索衛教資料】。
-         - 若使用者問及資料庫未記載的特定藥物或療法，請誠實告知並建議就醫，不可自行腦補。
-      
-      5. **多面向解析**：
-         - 如果使用者問「我最近頭暈」，不要只回答一種可能。請根據資料庫檢查是否與「貧血」、「低血壓 (透析後)」、「高血壓」或「藥物副作用」有關，並提示使用者注意哪些警訊。
-
-      6. **排版**：請使用純文字，保持版面乾淨，不要用 Markdown 粗體。`,
+      回答原則：
+      1. 優先依據上述資料回答。
+      2. 用語淺顯易懂，語氣溫暖、具備同理心。
+      3. 若資料不足，可補充一般醫學常識，但需註明。
+      4. **絕對不要使用 Markdown 的粗體語法 (如 **文字**)，請使用純文字排版。**`,
     }
   });
 
-  return response.text || "系統忙碌中，請稍後再試。";
+  return response.text || "抱歉，我現在無法回答，請稍後再試。";
 };
 
-// 2. 語音生成 (廣播劇風格版)
+// 2. 語音生成 (RAG 增強版)
 export const generatePodcastAudio = async (topic: string): Promise<{ audioUrl: string, script: string }> => {
   const ai = getClient();
 
-  // 檢索資料
+  // 針對主題檢索資料 (Podcast 需要較多素材，我們抓取前 6 筆)
   const retrievedItems = retrieveContext(topic, 6);
-
-  if (retrievedItems.length === 0) {
-    throw new Error("不好意思，資料庫中沒有關於此主題的資料，無法為您生成廣播內容。");
-  }
-
   const contextPrompt = formatContextToPrompt(retrievedItems);
 
   // Step 1: 生成逐字稿
   const scriptResponse = await ai.models.generateContent({
     model: GEMINI_MODEL_FLASH,
-    contents: `請根據以下衛教資料，為主題「${topic}」撰寫一份「非常白話、好懂」的 Podcast 廣播腳本。
+    contents: `請根據以下檢索到的衛教資料，為主題「${topic}」撰寫一份 Podcast 廣播腳本。
     
-    資料來源：
+    參考資料：
     ${contextPrompt}
     
-    【撰寫要求】：
-    1. **風格**：像是一位隔壁熱心的朋友「小榮」在聊天。語氣要非常輕鬆、口語化。
-    2. **去專業化**：請把所有專業術語都變成生活比喻。
-       (例：不要只說「高血磷」，要解釋成「骨頭會發癢、血管會硬掉」；不要說「eGFR」，要說「腎臟的分數」)。
-    3. **內容限制**：內容必須 100% 來自上述資料來源，不可自行編造。如果資料不足，就寫短一點沒關係。
-    4. **流暢度**：請加入自然的語助詞（像是：大家知道嗎？、其實啊、哎呀），讓聽起來不像在讀稿。
-    5. **輸出格式**：純文字腳本，不要包含 [音樂]、(笑聲) 等標記，只包含要唸出來的台詞。`,
+    要求：
+    1. 長度約 500 字 (口語朗讀約 2-3 分鐘)。
+    2. 角色：一位親切、活潑的男性來自「台北榮總」的資深腎臟病衛教個管師，名字叫小榮。
+    3. 語氣：非常口語化、輕鬆、溫暖。多用「大家知道嗎？」、「其實呀...」這類語助詞。
+    4. 內容必須基於參考資料，不要憑空捏造數據。
+    5. 輸出格式：純文字腳本，不要包含 [音樂]、(笑聲) 等標記。
+    6. 使用繁體中文。`,
   });
 
-  const scriptText = scriptResponse.text || "無法生成腳本。";
+  const scriptText = scriptResponse.text || "無法生成腳本，請稍後再試。";
 
-  // Step 2: TTS
+  // Step 2: 用TTS轉語音
   const audioResponse = await ai.models.generateContent({
     model: GEMINI_MODEL_TTS,
     contents: [{ parts: [{ text: scriptText }] }],
@@ -233,29 +180,28 @@ export const generatePodcastAudio = async (topic: string): Promise<{ audioUrl: s
   return { audioUrl, script: scriptText };
 };
 
-// 3. 心智圖資料生成 (結構化但白話版)
+// 3. 心智圖資料生成 (RAG 增強版)
 export const generateMindMapData = async (topic: string): Promise<MindMapNode> => {
   const ai = getClient();
 
+  // 針對主題檢索資料
   const retrievedItems = retrieveContext(topic, 5);
-
-  if (retrievedItems.length === 0) {
-    throw new Error("不好意思，資料庫中沒有關於此主題的資料，無法為您生成心智圖。");
-  }
-
   const contextPrompt = formatContextToPrompt(retrievedItems);
 
   const response = await ai.models.generateContent({
     model: GEMINI_MODEL_FLASH,
-    contents: `請根據以下資料，製作主題「${topic}」的心智圖 JSON。
+    contents: `請根據以下衛教資料，針對主題「${topic}」製作一個心智圖結構。
     
-    資料來源：
+    參考資料：
     ${contextPrompt}
     
-    【要求】：
-    1. **節點名稱要白話**：請儘量用淺顯易懂的短詞，不要用太長的學術名詞。
-    2. **結構清晰**：僅使用資料來源內的資訊。
-    3. 回傳標準 JSON 格式。`,
+    要求：
+    1. 僅使用上述資料庫內的資訊。
+    2. 請回傳一個標準的 JSON 物件。
+    3. 根節點 (Root) 是主題名稱：${topic}。
+    4. 每個節點結構必須包含 'name' (字串) 和 'children' (陣列)。
+    5. 層次分明，至少 3 層結構。
+    6. 不要包含任何 Markdown 標記，只回傳純 JSON 字串。`,
     config: {
       responseMimeType: "application/json"
     }
@@ -269,11 +215,11 @@ export const generateMindMapData = async (topic: string): Promise<MindMapNode> =
     return JSON.parse(cleanStr) as MindMapNode;
   } catch (e) {
     console.error("JSON Parse Error:", e, jsonStr);
-    throw new Error("無法解析心智圖資料。");
+    throw new Error("無法解析心智圖資料，請重試。");
   }
 };
 
-// --- Audio Helper Functions ---
+// --- Audio Helper Functions (Raw PCM to WAV) ---
 function decode(base64: string): Uint8Array {
   const binaryString = atob(base64);
   const len = binaryString.length;
@@ -294,7 +240,7 @@ function createWavFile(samples: Uint8Array, sampleRate: number, numChannels: num
     writeString(view, 8, 'WAVE');
     writeString(view, 12, 'fmt ');
     view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true); 
+    view.setUint16(20, 1, true); // PCM
     view.setUint16(22, numChannels, true);
     view.setUint32(24, sampleRate, true);
     view.setUint32(28, sampleRate * numChannels * 2, true);
