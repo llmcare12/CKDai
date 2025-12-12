@@ -1,6 +1,12 @@
-import { GoogleGenAI, Modality, Type } from "@google/genai";
-import { GEMINI_MODEL_FLASH, GEMINI_MODEL_TTS, KIDNEY_KNOWLEDGE_BASE } from "./constants";
-import { MindMapNode, QnAItem } from "../types";
+import { GoogleGenAI, Modality } from "@google/genai";
+import { 
+  GEMINI_MODEL_FLASH, 
+  GEMINI_MODEL_TTS, 
+  RAG_KNOWLEDGE_DB, // 記得確認 constants.ts 有 export 這三個
+  FIXED_QNA_LIST,
+  KnowledgeItem 
+} from "./constants";
+import { MindMapNode } from "../types";
 
 const getClient = () => {
   const apiKey = process.env.API_KEY;
@@ -13,20 +19,83 @@ const getClient = () => {
 // Helper to clean JSON string from Markdown code blocks
 const cleanJson = (text: string): string => {
   let clean = text.trim();
-  // Remove ```json ... ``` or ``` ... ```
   if (clean.startsWith('```')) {
     clean = clean.replace(/^```(json)?/, '').replace(/```$/, '');
   }
   return clean.trim();
 };
 
-// 1. AI摘要，聊天機器人
+// ==========================================
+// RAG 核心工具函式 (放在同一檔案方便呼叫)
+// ==========================================
+
+// 1. 固定問答精準匹配 (優先級最高，省 Token)
+function findFixedAnswer(query: string): string | null {
+  const target = FIXED_QNA_LIST.find(item => 
+    item.question.includes(query) || query.includes(item.question)
+  );
+  return target ? target.answer : null;
+}
+
+// 2. 模糊檢索 (找出最相關的知識片段)
+function retrieveContext(query: string, topK: number = 3): KnowledgeItem[] {
+  const lowerQuery = query.toLowerCase();
+  
+  // 簡易計分機制
+  const scoredData = RAG_KNOWLEDGE_DB.map(item => {
+    let score = 0;
+    if (item.topic.includes(query)) score += 10;          // 標題命中權重最高
+    if (item.content.includes(query)) score += 5;         // 內容命中
+    if (item.summary.includes(query)) score += 3;         // 摘要命中
+    const keywordMatch = item.keywords.some(k => lowerQuery.includes(k.toLowerCase()));
+    if (keywordMatch) score += 8;                         // 關鍵字命中
+
+    return { item, score };
+  });
+
+  // 過濾掉沒分數的，由高分排到低分，取前 K 筆
+  return scoredData
+    .filter(d => d.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topK)
+    .map(d => d.item);
+}
+
+// 3. 將檢索到的資料轉為文字 Prompt
+function formatContextToPrompt(items: KnowledgeItem[]): string {
+  if (items.length === 0) return "目前資料庫中無直接相關資訊，請基於一般醫學常識回答，並提醒使用者諮詢醫師。";
+  return items.map((item, idx) => `
+  [資料 ${idx + 1}]
+  主題：${item.topic}
+  摘要：${item.summary}
+  內容：${item.content}
+  `).join('\n---\n');
+}
+
+
+// ==========================================
+// 主要 Service 功能
+// ==========================================
+
+// 1. AI 摘要，聊天機器人 (RAG 增強版)
 export const generateChatResponse = async (
   userMessage: string, 
   history: { role: string; content: string }[]
 ): Promise<string> => {
+  
+  // Step A: 先檢查固定問答 (秒回，不消耗 API)
+  const fixedAns = findFixedAnswer(userMessage);
+  if (fixedAns) {
+    return fixedAns; // 直接回傳，不呼叫 Gemini
+  }
+
+  // Step B: 執行 RAG 檢索
+  const retrievedItems = retrieveContext(userMessage, 4); // 抓取前 4 筆最相關
+  const contextPrompt = formatContextToPrompt(retrievedItems);
+
   const ai = getClient();
   
+  // Step C: 呼叫 Gemini
   const response = await ai.models.generateContent({
     model: GEMINI_MODEL_FLASH,
     contents: [
@@ -40,46 +109,44 @@ export const generateChatResponse = async (
       systemInstruction: `你是一位專業、親切的腎臟病衛教 AI 助理。
       
       任務：
-      根據以下的【衛教資料庫】內容回答使用者的問題。
+      根據以下的【檢索到的衛教資料】回答使用者的問題。
       
-      【衛教資料庫】：
-      ${KIDNEY_KNOWLEDGE_BASE}
+      【檢索到的衛教資料】：
+      ${contextPrompt}
       
       回答原則：
-      1. 嚴格根據資料庫內容回答，不要自行編造醫學建議。
-      2. 用語淺顯易懂，避免過多艱深術語，適合病患與護理人員閱讀。
-      3. 若資料庫中沒有答案，請婉轉告知「目前資料庫中無相關資訊，建議諮詢醫師」。
-      4. 語氣要溫暖、具備同理心。
-      5. 使用繁體中文。
-      6. **絕對不要使用 Markdown 的粗體語法 (如 **文字**)，請使用純文字排版，保持版面乾淨。**`,
+      1. 優先依據上述資料回答。
+      2. 用語淺顯易懂，語氣溫暖、具備同理心。
+      3. 若資料不足，可補充一般醫學常識，但需註明。
+      4. **絕對不要使用 Markdown 的粗體語法 (如 **文字**)，請使用純文字排版。**`,
     }
   });
 
   return response.text || "抱歉，我現在無法回答，請稍後再試。";
 };
 
-// 2. 語音生成
+// 2. 語音生成 (RAG 增強版)
 export const generatePodcastAudio = async (topic: string): Promise<{ audioUrl: string, script: string }> => {
   const ai = getClient();
+
+  // 針對主題檢索資料 (Podcast 需要較多素材，我們抓取前 6 筆)
+  const retrievedItems = retrieveContext(topic, 6);
+  const contextPrompt = formatContextToPrompt(retrievedItems);
 
   // Step 1: 生成逐字稿
   const scriptResponse = await ai.models.generateContent({
     model: GEMINI_MODEL_FLASH,
-    contents: `請根據以下衛教資料，為主題「${topic}」撰寫一份 Podcast 廣播腳本。
+    contents: `請根據以下檢索到的衛教資料，為主題「${topic}」撰寫一份 Podcast 廣播腳本。
     
-    資料來源：
-    ${KIDNEY_KNOWLEDGE_BASE}
+    參考資料：
+    ${contextPrompt}
     
     要求：
     1. 長度約 500 字 (口語朗讀約 2-3 分鐘)。
     2. 角色：一位親切、活潑的男性來自「台北榮總」的資深腎臟病衛教個管師，名字叫小榮。
-            核心任務是協助慢性腎臟病 (CKD) 病友進行「居家自我管理」，目標是延緩腎功能惡化，避免提早洗腎，不要太嚴肅。
-    3. 語氣：非常口語化、輕鬆、溫暖、有互動感。多用「大家知道嗎？」、「其實呀...」、「別擔心...」、「簡單來說」這類語助詞。
-    4. 結構：
-       - 開場：熱情打招呼，帶出今天的主題。
-       - 內容：用講故事或聊天的口吻介紹衛教知識，舉例要生活化 (僅限資料庫內容)。
-       - 結尾：溫馨提醒，鼓勵病友加油。
-    5. 輸出格式：純文字腳本，不要包含 [音樂]、(笑聲)、[主持人] 等非口語標記，只包含要唸出來的台詞。
+    3. 語氣：非常口語化、輕鬆、溫暖。多用「大家知道嗎？」、「其實呀...」這類語助詞。
+    4. 內容必須基於參考資料，不要憑空捏造數據。
+    5. 輸出格式：純文字腳本，不要包含 [音樂]、(笑聲) 等標記。
     6. 使用繁體中文。`,
   });
 
@@ -93,7 +160,7 @@ export const generatePodcastAudio = async (topic: string): Promise<{ audioUrl: s
       responseModalities: [Modality.AUDIO],
       speechConfig: {
         voiceConfig: {
-          prebuiltVoiceConfig: { voiceName: 'Charon' }, // Kore is typically female-sounding
+          prebuiltVoiceConfig: { voiceName: 'Charon' }, 
         },
       },
     },
@@ -113,26 +180,28 @@ export const generatePodcastAudio = async (topic: string): Promise<{ audioUrl: s
   return { audioUrl, script: scriptText };
 };
 
-// 3. 心智圖資料生成
+// 3. 心智圖資料生成 (RAG 增強版)
 export const generateMindMapData = async (topic: string): Promise<MindMapNode> => {
   const ai = getClient();
 
+  // 針對主題檢索資料
+  const retrievedItems = retrieveContext(topic, 5);
+  const contextPrompt = formatContextToPrompt(retrievedItems);
 
   const response = await ai.models.generateContent({
     model: GEMINI_MODEL_FLASH,
     contents: `請根據以下衛教資料，針對主題「${topic}」製作一個心智圖結構。
     
-    資料來源：
-    ${KIDNEY_KNOWLEDGE_BASE}
+    參考資料：
+    ${contextPrompt}
     
     要求：
-    1. 僅使用資料庫內的資訊。
+    1. 僅使用上述資料庫內的資訊。
     2. 請回傳一個標準的 JSON 物件。
-    3. 根節點 (Root) 是主題名稱。
+    3. 根節點 (Root) 是主題名稱：${topic}。
     4. 每個節點結構必須包含 'name' (字串) 和 'children' (陣列)。
-    5. 如果該節點沒有子節點，'children' 可以是空陣列或不包含此欄位。
-    6. 層次分明，請盡量詳細，至少 3 層結構。
-    7. 不要包含任何 Markdown 標記 (如 \`\`\`json)，只回傳純 JSON 字串。`,
+    5. 層次分明，至少 3 層結構。
+    6. 不要包含任何 Markdown 標記，只回傳純 JSON 字串。`,
     config: {
       responseMimeType: "application/json"
     }
@@ -149,9 +218,6 @@ export const generateMindMapData = async (topic: string): Promise<MindMapNode> =
     throw new Error("無法解析心智圖資料，請重試。");
   }
 };
-
-
-
 
 // --- Audio Helper Functions (Raw PCM to WAV) ---
 function decode(base64: string): Uint8Array {
