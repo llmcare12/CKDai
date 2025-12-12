@@ -23,8 +23,7 @@ export interface QnAItem {
 // 2. 結構化的 RAG 知識庫 (這是你剛剛做好的部分)
 // ==========================================
 export const RAG_KNOWLEDGE_DB: KnowledgeItem[] = [
-  ```json
-[
+  
   {
     "id": "DIET_PRO_001",
     "topic": "慢性腎臟病階段性蛋白質攝取指引",
