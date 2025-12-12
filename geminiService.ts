@@ -63,7 +63,7 @@ function retrieveContext(query: string, topK: number = 3): KnowledgeItem[] {
 
 // 3. 將檢索到的資料轉為文字 Prompt
 function formatContextToPrompt(items: KnowledgeItem[]): string {
-  if (items.length === 0) return "目前資料庫中無直接相關資訊，請基於一般醫學常識回答，並提醒使用者諮詢醫師。";
+  if (items.length === 0) return "目前資料庫中無直接相關資訊，並提醒使用者諮詢醫師。";
   return items.map((item, idx) => `
   [資料 ${idx + 1}]
   主題：${item.topic}
@@ -117,7 +117,7 @@ export const generateChatResponse = async (
       回答原則：
       1. 優先依據上述資料回答。
       2. 用語淺顯易懂，語氣溫暖、具備同理心。
-      3. 若資料不足，可補充一般醫學常識，但需註明。
+      3. 若資料庫中沒有答案，請婉轉告知「目前資料庫中無相關資訊，建議諮詢醫師」。
       4. **絕對不要使用 Markdown 的粗體語法 (如 **文字**)，請使用純文字排版。**`,
     }
   });
