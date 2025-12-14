@@ -357,7 +357,7 @@ const QnA = () => {
         <div className="aspect-video w-full">
           <iframe 
             className="w-full h-full"
-            src="https://youtu.be/C7Z94YJDpIM" 
+            src="https://www.youtube.com/watch?v=C7Z94YJDpIM" 
             title="衛教導覽影片"
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
