@@ -3,9 +3,8 @@ export const APP_NAME = "KidneyCare AI";
 export const GEMINI_MODEL_FLASH = 'gemini-2.5-flash';
 export const GEMINI_MODEL_TTS = 'gemini-2.5-flash-preview-tts';
 
-// ==========================================
-// 1. 定義資料結構型別 (讓開發時有自動補全)
-// ==========================================
+// 定義資料結構型別 (開發時有自動補全)
+
 export interface KnowledgeItem {
   id: string;
   topic: string;
@@ -19,9 +18,9 @@ export interface QnAItem {
   answer: string;
 }
 
-// ==========================================
-// 2. 結構化的 RAG 知識庫 (這是你剛剛做好的部分)
-// ==========================================
+
+// 結構化的 RAG 知識庫 
+
 export const RAG_KNOWLEDGE_DB: KnowledgeItem[] = [
   
   {
@@ -209,17 +208,10 @@ export const RAG_KNOWLEDGE_DB: KnowledgeItem[] = [
     
 ];
 
-// ==========================================
-// 3. (選擇性) 保留原始長文本，若之後需要整包餵給 AI
-// ==========================================
-export const RAW_KNOWLEDGE_BASE = `
-【慢性腎臟病 (CKD) 全方位專業衛教資料庫】
-... (若你還需要保留之前的原始長文字，可以放在這裡，但我們主要會用上面的 RAG_KNOWLEDGE_DB)
-`;
 
-// ==========================================
-// 4. 固定問答集 (Q&A)
-// ==========================================
+
+// 固定問答集 (Q&A)
+
 export const FIXED_QNA_LIST: QnAItem[] = [
   {
     question: "我小便有泡泡，是不是就代表腎臟壞掉了？",
