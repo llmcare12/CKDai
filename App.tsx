@@ -352,6 +352,23 @@ const QnA = () => {
         <h2 className="text-3xl font-bold text-gray-900">常見問題集 Q&A</h2>
         <p className="text-gray-500">彙整病患最常詢問的 15 個關鍵問題 (源自衛教手冊)</p>
       </div>
+      
+      <div className="bg-white rounded-3xl shadow-lg overflow-hidden border border-gray-100">
+        <div className="aspect-video w-full">
+          <iframe 
+            className="w-full h-full"
+            src="https://youtu.be/C7Z94YJDpIM" 
+            title="衛教導覽影片"
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+            allowFullScreen
+          ></iframe>
+        </div>
+        <div className="p-6">
+          <h3 className="text-xl font-bold text-gray-900 mb-2">🎥 衛教導覽影片</h3>
+          <p className="text-gray-600">觀看影片快速了解腎臟病照護重點。</p>
+        </div>
+      </div>
 
       <div className="space-y-6">
         {items.map((item, idx) => (
