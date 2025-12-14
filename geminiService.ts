@@ -76,8 +76,9 @@ function formatContextToPrompt(items: KnowledgeItem[]): string {
 // ==========================================
 // 主要 Service 功能
 // ==========================================
-
-// 1. AI 摘要，聊天機器人 (RAG 增強版)
+// ==========================================
+// 1. AI 摘要，聊天機器人 (RAG 增強版 + 飲食智慧反問)
+// ==========================================
 export const generateChatResponse = async (
   userMessage: string, 
   history: { role: string; content: string }[]
@@ -86,16 +87,18 @@ export const generateChatResponse = async (
   // Step A: 先檢查固定問答 (秒回，不消耗 API)
   const fixedAns = findFixedAnswer(userMessage);
   if (fixedAns) {
-    return fixedAns; // 直接回傳，不呼叫 Gemini
+    return fixedAns; 
   }
 
   // Step B: 執行 RAG 檢索
-  const retrievedItems = retrieveContext(userMessage, 4); // 抓取前 4 筆最相關
+  // 技巧：如果使用者問的是具體食物(如滷肉飯)，RAG 可能找不到滷肉飯的條目，
+  // 但會找到「低蛋白飲食」、「鈉限制」等通則，這些通則對 AI 判斷很重要。
+  const retrievedItems = retrieveContext(userMessage, 5); 
   const contextPrompt = formatContextToPrompt(retrievedItems);
 
   const ai = getClient();
   
-  // Step C: 呼叫 Gemini
+  // Step C: 呼叫 Gemini (核心修改處：System Instruction)
   const response = await ai.models.generateContent({
     model: GEMINI_MODEL_FLASH,
     contents: [
@@ -106,19 +109,27 @@ export const generateChatResponse = async (
       { role: 'user', parts: [{ text: userMessage }] }
     ],
     config: {
-      systemInstruction: `你是一位專業、親切的腎臟病衛教 AI 助理。
+      // ✨ 這裡加入了「飲食分析判斷邏輯」
+      systemInstruction: `你是一位專業、親切的腎臟病衛教 AI 助理「KidneyCare AI」。
       
-      任務：
-      根據以下的【檢索到的衛教資料】回答使用者的問題。
-      
+      【任務目標】
+      根據【檢索到的衛教資料】回答使用者的問題。
+
       【檢索到的衛教資料】：
       ${contextPrompt}
       
-      回答原則：
-      1. 優先依據上述資料回答。
-      2. 用語淺顯易懂，語氣溫暖、具備同理心。
-      3. 若資料庫中沒有答案，請婉轉告知「目前資料庫中無相關資訊，建議諮詢醫師」。
-      4. **絕對不要使用 Markdown 的粗體語法 (如 **文字**)，請使用純文字排版。**`,
+      【回答核心規則 (重要)】
+      1. **一般問題**：若使用者問的是定義、症狀、原則 (例如：什麼是高血磷？)，請直接依據資料回答。
+      2. **飲食/食物分析問題 (Smart Check)**：
+         當使用者詢問「某種食物能不能吃？」或「飲食建議」時，你必須執行以下判斷：
+         - **檢查資訊**：判斷使用者的對話中(包含歷史訊息)是否已提供**「腎臟病階段」**(如：第幾期、G3、洗腎中、透析中) 或 **「共病症」**(如：糖尿病)。
+         - **🔴 資訊不足時**：請**不要**直接給出建議。請禮貌地反問：「為了給您正確的建議，請問您目前的腎臟功能大約在第幾期？或是已經開始洗腎了嗎？(因為洗腎前後的飲食原則是相反的喔！)」
+         - **🟢 資訊充足時**：請根據使用者的階段 (未洗腎需低蛋白/洗腎需高蛋白)，結合檢索資料中的鈉、磷、鉀限制規則，給出該食物的「適合度燈號 (🟢/🟡/🔴)」與「改良建議」。
+
+      【語氣與排版】
+      1. 溫暖、具備同理心。
+      2. **絕對不要使用 Markdown 的粗體語法 (如 **文字**)，請使用純文字排版。**
+      3. 若資料庫無相關資訊且無法判斷，請建議諮詢醫師。`,
     }
   });
 
