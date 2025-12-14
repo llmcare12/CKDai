@@ -2,8 +2,8 @@ import { GoogleGenAI, Modality } from "@google/genai";
 import { 
   GEMINI_MODEL_FLASH, 
   GEMINI_MODEL_TTS, 
-  RAG_KNOWLEDGE_DB, 
-  FIXED_QNA_LIST, 
+  RAG_KNOWLEDGE_DB, // 記得確認 constants.ts 有 export 這三個
+  FIXED_QNA_LIST,
   KnowledgeItem 
 } from "./constants";
 import { MindMapNode } from "../types";
@@ -16,22 +16,7 @@ const getClient = () => {
   return new GoogleGenAI({ apiKey });
 };
 
-// ==========================================
-// ✨ 新增：Markdown 清洗工具 (強力去除所有格式)
-// ==========================================
-const cleanMarkdown = (text: string): string => {
-  if (!text) return "";
-  return text
-    .replace(/\*\*(.*?)\*\*/g, '$1') // 移除粗體 **text** -> text
-    .replace(/\*(.*?)\*/g, '$1')     // 移除斜體 *text* -> text
-    .replace(/__(.*?)__/g, '$1')     // 移除粗體 __text__ -> text
-    .replace(/`([^`]+)`/g, '$1')     // 移除程式碼 `code` -> code
-    .replace(/^#+\s+/gm, '')         // 移除標題 # Title -> Title
-    .replace(/\n\s*-\s+/g, '\n• ')   // 將 Markdown 條列 - 換成純文字圓點 • (可選)
-    .trim();
-};
-
-// Helper to clean JSON string from Markdown code blocks (保留你的原始 helper)
+// Helper to clean JSON string from Markdown code blocks
 const cleanJson = (text: string): string => {
   let clean = text.trim();
   if (clean.startsWith('```')) {
@@ -41,12 +26,10 @@ const cleanJson = (text: string): string => {
 };
 
 // ==========================================
-// RAG 核心工具函式
+// RAG 核心工具函式 (放在同一檔案方便呼叫)
 // ==========================================
-// ... (findFixedAnswer, retrieveContext, formatContextToPrompt 保持不變，省略以節省篇幅)
-// 請保留原本的 findFixedAnswer, retrieveContext, formatContextToPrompt 程式碼
-// ...
 
+// 1. 固定問答精準匹配 (優先級最高，省 Token)
 function findFixedAnswer(query: string): string | null {
   const target = FIXED_QNA_LIST.find(item => 
     item.question.includes(query) || query.includes(item.question)
@@ -54,20 +37,23 @@ function findFixedAnswer(query: string): string | null {
   return target ? target.answer : null;
 }
 
+// 2. 模糊檢索 (找出最相關的知識片段)
 function retrieveContext(query: string, topK: number = 3): KnowledgeItem[] {
   const lowerQuery = query.toLowerCase();
   
+  // 簡易計分機制
   const scoredData = RAG_KNOWLEDGE_DB.map(item => {
     let score = 0;
-    if (item.topic.includes(query)) score += 10;
-    if (item.content.includes(query)) score += 5;
-    if (item.summary.includes(query)) score += 3;
+    if (item.topic.includes(query)) score += 10;          // 標題命中權重最高
+    if (item.content.includes(query)) score += 5;         // 內容命中
+    if (item.summary.includes(query)) score += 3;         // 摘要命中
     const keywordMatch = item.keywords.some(k => lowerQuery.includes(k.toLowerCase()));
-    if (keywordMatch) score += 8;
+    if (keywordMatch) score += 8;                         // 關鍵字命中
 
     return { item, score };
   });
 
+  // 過濾掉沒分數的，由高分排到低分，取前 K 筆
   return scoredData
     .filter(d => d.score > 0)
     .sort((a, b) => b.score - a.score)
@@ -75,6 +61,7 @@ function retrieveContext(query: string, topK: number = 3): KnowledgeItem[] {
     .map(d => d.item);
 }
 
+// 3. 將檢索到的資料轉為文字 Prompt
 function formatContextToPrompt(items: KnowledgeItem[]): string {
   if (items.length === 0) return "目前資料庫中無直接相關資訊，並提醒使用者諮詢醫師。";
   return items.map((item, idx) => `
@@ -85,10 +72,10 @@ function formatContextToPrompt(items: KnowledgeItem[]): string {
   `).join('\n---\n');
 }
 
+
 // ==========================================
 // 主要 Service 功能
 // ==========================================
-
 // ==========================================
 // 1. AI 摘要，聊天機器人 (RAG 增強版 + 飲食智慧反問)
 // ==========================================
@@ -97,19 +84,21 @@ export const generateChatResponse = async (
   history: { role: string; content: string }[]
 ): Promise<string> => {
   
-  // Step A: 先檢查固定問答
+  // Step A: 先檢查固定問答 (秒回，不消耗 API)
   const fixedAns = findFixedAnswer(userMessage);
   if (fixedAns) {
     return fixedAns; 
   }
 
   // Step B: 執行 RAG 檢索
+  // 技巧：如果使用者問的是具體食物(如滷肉飯)，RAG 可能找不到滷肉飯的條目，
+  // 但會找到「低蛋白飲食」、「鈉限制」等通則，這些通則對 AI 判斷很重要。
   const retrievedItems = retrieveContext(userMessage, 5); 
   const contextPrompt = formatContextToPrompt(retrievedItems);
 
   const ai = getClient();
   
-  // Step C: 呼叫 Gemini
+  // Step C: 呼叫 Gemini (核心修改處：System Instruction)
   const response = await ai.models.generateContent({
     model: GEMINI_MODEL_FLASH,
     contents: [
@@ -120,19 +109,13 @@ export const generateChatResponse = async (
       { role: 'user', parts: [{ text: userMessage }] }
     ],
     config: {
-      // ✨ Prompt 優化：將格式要求移到這裡，並移除 prompt 內的 markdown 語法以免混淆 AI
+      // ✨ 這裡加入了「飲食分析判斷邏輯」
       systemInstruction: `你是一位專業、親切的腎臟病衛教 AI 助理「KidneyCare AI」。
 
-      【嚴格輸出格式限制】
-      1. 輸出純文字 (Plain Text)。
-      2. 禁止使用任何 Markdown 標記。
-      3. 禁止使用粗體 (不要用星號包圍文字)。
-      4. 禁止使用標題符號 (#)。
-      
       【🚨 最高優先級緊急原則 (Safety First)】
-      在回答任何問題前，先檢查使用者的訊息是否包含以下危急症狀：
+      在回答任何問題前，先檢查使用者的訊息是否包含以下**危急症狀**：
       - 關鍵字：「胸痛」、「喘不過氣」、「呼吸困難」、「意識不清」、「昏倒」、「劇烈頭痛」、「大量出血」、「心跳停止」。
-      - 若偵測到上述關鍵字：請忽略所有衛教資料，直接用嚴肅且緊急的語氣回答：「⚠️ 警告：這可能是危急生命的情況！請立刻撥打 119 或前往最近的急診室就醫，請勿在網路上等待回應。」
+      - **若偵測到上述關鍵字**：請**忽略**所有衛教資料，直接用嚴肅且緊急的語氣回答：「⚠️ 警告：這可能是危急生命的情況！請立刻撥打 119 或前往最近的急診室就醫，請勿在網路上等待回應。」
       
       【任務目標】
       根據【檢索到的衛教資料】回答使用者的問題。
@@ -140,33 +123,33 @@ export const generateChatResponse = async (
       【檢索到的衛教資料】：
       ${contextPrompt}
       
-      【回答核心規則 (Smart Check)】
-      1. 一般問題：若使用者問的是定義、症狀、原則，請直接依據資料回答。
-      2. 飲食/食物分析問題：
+      【回答核心規則 (重要)】
+      1. **一般問題**：若使用者問的是定義、症狀、原則 (例如：什麼是高血磷？)，請直接依據資料回答。
+      2. **飲食/食物分析問題 (Smart Check)**：
          當使用者詢問「某種食物能不能吃？」或「飲食建議」時，你必須執行以下判斷：
-         - 檢查資訊：判斷使用者的對話中是否已提供「腎臟病階段」或「共病症」。
-         - 資訊不足時：請不要直接給出建議。請禮貌地反問：「為了給您正確的建議，請問您目前的腎臟功能大約在第幾期？或是已經開始洗腎了嗎？」
-         - 資訊充足時：請根據使用者的階段，結合資料給出該食物的「適合度燈號 (🔴/🟡/🟢)」與「改良建議」。
+         - **檢查資訊**：判斷使用者的對話中(包含歷史訊息)是否已提供**「腎臟病階段」**(如：第幾期、G3、洗腎中、透析中) 或 **「共病症」**(如：糖尿病)。
+         - **🔴 資訊不足時**：請**不要**直接給出建議。請禮貌地反問：「為了給您正確的建議，請問您目前的腎臟功能大約在第幾期？或是已經開始洗腎了嗎？(因為洗腎前後的飲食原則是相反的喔！)」
+         - **🟢 資訊充足時**：請根據使用者的階段 (未洗腎需低蛋白/洗腎需高蛋白)，結合檢索資料中的鈉、磷、鉀限制規則，給出該食物的「適合度燈號 (🟢/🟡/🔴)」與「改良建議」。
 
-      【語氣】
-      溫暖、具備同理心。`,
+      【語氣與排版】
+      1. 溫暖、具備同理心。
+      2. **絕對不要使用 Markdown 的粗體語法 (如 **文字**)，請使用純文字排版。**
+      3. 若資料庫無相關資訊且無法判斷，請建議諮詢醫師。`,
     }
   });
 
-  const rawText = response.text || "抱歉，我現在無法回答，請稍後再試。";
-  
-  // ✨ 最後防線：回傳前再強制清洗一次
-  return cleanMarkdown(rawText);
+  return response.text || "抱歉，我現在無法回答，請稍後再試。";
 };
 
-// ... (generatePodcastAudio, generateMindMapData, Audio Helpers 保持不變)
-// 請直接保留原本的 generatePodcastAudio, generateMindMapData 和底下的 helper functions
-// ...
+// 2. 語音生成 (RAG 增強版)
 export const generatePodcastAudio = async (topic: string): Promise<{ audioUrl: string, script: string }> => {
   const ai = getClient();
+
+  // 針對主題檢索資料 (Podcast 需要較多素材，我們抓取前 6 筆)
   const retrievedItems = retrieveContext(topic, 6);
   const contextPrompt = formatContextToPrompt(retrievedItems);
 
+  // Step 1: 生成逐字稿
   const scriptResponse = await ai.models.generateContent({
     model: GEMINI_MODEL_FLASH,
     contents: `請根據以下檢索到的衛教資料，為主題「${topic}」撰寫一份 Podcast 廣播腳本。
@@ -175,22 +158,20 @@ export const generatePodcastAudio = async (topic: string): Promise<{ audioUrl: s
     ${contextPrompt}
     
     要求：
-    1. 長度約 500 字。
+    1. 長度約 500 字 (口語朗讀約 2-3 分鐘)。
     2. 角色：一位親切、活潑的男性來自「台北榮總」的資深腎臟病衛教個管師，名字叫小榮。
-    3. 語氣：非常口語化、輕鬆、溫暖。
-    4. 內容必須基於參考資料。
+    3. 語氣：非常口語化、輕鬆、溫暖。多用「大家知道嗎？」、「其實呀...」這類語助詞。
+    4. 內容必須基於參考資料，不要憑空捏造數據。
     5. 輸出格式：純文字腳本，不要包含 [音樂]、(笑聲) 等標記。
     6. 使用繁體中文。`,
   });
 
   const scriptText = scriptResponse.text || "無法生成腳本，請稍後再試。";
 
-  // ✨ Podcast 腳本也建議清洗一下，以免唸出「星號 星號」
-  const cleanScript = cleanMarkdown(scriptText); 
-
+  // Step 2: 用TTS轉語音
   const audioResponse = await ai.models.generateContent({
     model: GEMINI_MODEL_TTS,
-    contents: [{ parts: [{ text: cleanScript }] }], // 使用清洗後的文字轉語音
+    contents: [{ parts: [{ text: scriptText }] }],
     config: {
       responseModalities: [Modality.AUDIO],
       speechConfig: {
@@ -212,11 +193,14 @@ export const generatePodcastAudio = async (topic: string): Promise<{ audioUrl: s
   const blob = new Blob([wavBytes], { type: 'audio/wav' });
   const audioUrl = URL.createObjectURL(blob);
 
-  return { audioUrl, script: cleanScript };
+  return { audioUrl, script: scriptText };
 };
 
+// 3. 心智圖資料生成 (RAG 增強版)
 export const generateMindMapData = async (topic: string): Promise<MindMapNode> => {
   const ai = getClient();
+
+  // 針對主題檢索資料
   const retrievedItems = retrieveContext(topic, 5);
   const contextPrompt = formatContextToPrompt(retrievedItems);
 
@@ -251,6 +235,7 @@ export const generateMindMapData = async (topic: string): Promise<MindMapNode> =
   }
 };
 
+// --- Audio Helper Functions (Raw PCM to WAV) ---
 function decode(base64: string): Uint8Array {
   const binaryString = atob(base64);
   const len = binaryString.length;
