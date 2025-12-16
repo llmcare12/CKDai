@@ -2,7 +2,7 @@ import { GoogleGenAI, Modality } from "@google/genai";
 import { 
   GEMINI_MODEL_FLASH, 
   GEMINI_MODEL_TTS, 
-  RAG_KNOWLEDGE_DB, // 記得確認 constants.ts 有 export 這三個
+  RAG_KNOWLEDGE_DB, 
   FIXED_QNA_LIST,
   KnowledgeItem 
 } from "./constants";
@@ -25,11 +25,11 @@ const cleanJson = (text: string): string => {
   return clean.trim();
 };
 
-// ==========================================
-// RAG 核心工具函式 (放在同一檔案方便呼叫)
-// ==========================================
 
-// 1. 固定問答精準匹配 (優先級最高，省 Token)
+// RAG 核心工具函式 
+
+
+// 1. 固定問答精準匹配 
 function findFixedAnswer(query: string): string | null {
   const target = FIXED_QNA_LIST.find(item => 
     item.question.includes(query) || query.includes(item.question)
@@ -37,7 +37,7 @@ function findFixedAnswer(query: string): string | null {
   return target ? target.answer : null;
 }
 
-// 2. 模糊檢索 (找出最相關的知識片段)
+// 2. 模糊檢索 
 function retrieveContext(query: string, topK: number = 3): KnowledgeItem[] {
   const lowerQuery = query.toLowerCase();
   
@@ -73,32 +73,30 @@ function formatContextToPrompt(items: KnowledgeItem[]): string {
 }
 
 
-// ==========================================
+
 // 主要 Service 功能
-// ==========================================
-// ==========================================
-// 1. AI 摘要，聊天機器人 (RAG 增強版 + 飲食智慧反問)
-// ==========================================
+
+// 1. AI 摘要，聊天機器人 
 export const generateChatResponse = async (
   userMessage: string, 
   history: { role: string; content: string }[]
 ): Promise<string> => {
   
-  // Step A: 先檢查固定問答 (秒回，不消耗 API)
+  // 先檢查固定問答 
   const fixedAns = findFixedAnswer(userMessage);
   if (fixedAns) {
     return fixedAns; 
   }
 
-  // Step B: 執行 RAG 檢索
-  // 技巧：如果使用者問的是具體食物(如滷肉飯)，RAG 可能找不到滷肉飯的條目，
+  // 執行 RAG 檢索
+  // 如果使用者問的是具體食物(如滷肉飯)，RAG 可能找不到滷肉飯的條目，
   // 但會找到「低蛋白飲食」、「鈉限制」等通則，這些通則對 AI 判斷很重要。
   const retrievedItems = retrieveContext(userMessage, 5); 
   const contextPrompt = formatContextToPrompt(retrievedItems);
 
   const ai = getClient();
   
-  // Step C: 呼叫 Gemini (核心修改處：System Instruction)
+  // 呼叫 Gemini (核心修改處：System Instruction)
   const response = await ai.models.generateContent({
     model: GEMINI_MODEL_FLASH,
     contents: [
@@ -109,10 +107,10 @@ export const generateChatResponse = async (
       { role: 'user', parts: [{ text: userMessage }] }
     ],
     config: {
-      // ✨ 這裡加入了「飲食分析判斷邏輯」
+      
       systemInstruction: `你是一位專業、親切的腎臟病衛教 AI 助理「KidneyCare AI」。
 
-      【🚨 最高優先級緊急原則 (Safety First)】
+      【最高優先級緊急原則 (Safety First)】
       在回答任何問題前，先檢查使用者的訊息是否包含以下**危急症狀**：
       - 關鍵字：「胸痛」、「喘不過氣」、「呼吸困難」、「意識不清」、「昏倒」、「劇烈頭痛」、「大量出血」、「心跳停止」。
       - **若偵測到上述關鍵字**：請**忽略**所有衛教資料，直接用嚴肅且緊急的語氣回答：「⚠️ 警告：這可能是危急生命的情況！請立刻撥打 119 或前往最近的急診室就醫，請勿在網路上等待回應。」
@@ -141,15 +139,15 @@ export const generateChatResponse = async (
   return response.text || "抱歉，我現在無法回答，請稍後再試。";
 };
 
-// 2. 語音生成 (RAG 增強版)
+// 2. 語音生成 
 export const generatePodcastAudio = async (topic: string): Promise<{ audioUrl: string, script: string }> => {
   const ai = getClient();
 
-  // 針對主題檢索資料 (Podcast 需要較多素材，我們抓取前 6 筆)
+  // 針對主題檢索資料 
   const retrievedItems = retrieveContext(topic, 6);
   const contextPrompt = formatContextToPrompt(retrievedItems);
 
-  // Step 1: 生成逐字稿
+  // 生成逐字稿
   const scriptResponse = await ai.models.generateContent({
     model: GEMINI_MODEL_FLASH,
     contents: `請根據以下檢索到的衛教資料，為主題「${topic}」撰寫一份 Podcast 廣播腳本。
@@ -168,7 +166,7 @@ export const generatePodcastAudio = async (topic: string): Promise<{ audioUrl: s
 
   const scriptText = scriptResponse.text || "無法生成腳本，請稍後再試。";
 
-  // Step 2: 用TTS轉語音
+  // 用TTS轉語音
   const audioResponse = await ai.models.generateContent({
     model: GEMINI_MODEL_TTS,
     contents: [{ parts: [{ text: scriptText }] }],
@@ -196,7 +194,7 @@ export const generatePodcastAudio = async (topic: string): Promise<{ audioUrl: s
   return { audioUrl, script: scriptText };
 };
 
-// 3. 心智圖資料生成 (RAG 增強版)
+// 3. 心智圖資料生成 
 export const generateMindMapData = async (topic: string): Promise<MindMapNode> => {
   const ai = getClient();
 
