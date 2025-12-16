@@ -312,15 +312,15 @@ const MindMap = () => {
             </span> 知識心智圖
           </h2>
           <p className="text-gray-500 text-center mb-4">輸入關鍵字，AI 為您整理結構化的知識圖表。</p>
-          {/* 🛠️ 修改 3: 改為 flex-col (手機直排) sm:flex-row (電腦橫排) */}
+          {/*  flex-col (手機直排) sm:flex-row (電腦橫排) */}
           <div className="flex flex-col sm:flex-row gap-3">
             <input 
               value={topic}
               onChange={e => setTopic(e.target.value)}
-              placeholder="例如：含鉀食物有哪些？"
+              pla ceholder="例如：含鉀食物有哪些？"
               className="flex-1 px-5 py-3 bg-white border border-gray-200 text-gray-700 shadow-sm rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none placeholder-gray-400"
             />
-            {/* 🛠️ 修改: 手機版 w-full，電腦版 w-auto */}
+            {/* 手機版 w-full，電腦版 w-auto */}
             <Button 
               onClick={handleGenerate} 
               disabled={loading} 
