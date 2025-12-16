@@ -9,6 +9,7 @@ import podcastImg from './podcast.png';
 import brainImg from './brain.png';
 import qnaImg from './Qna.png';
 import playImg from './play.png';
+import qa from './qa.wav';
 
 // --- Shared Components ---
 const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ className, children, ...props }) => (
@@ -354,19 +355,12 @@ const QnA = () => {
       </div>
       
       <div className="bg-white rounded-3xl shadow-lg overflow-hidden border border-gray-100">
-        <div className="aspect-video w-full">
-          <iframe 
-            className="w-full h-full"
-            src="https://www.youtube.com/embed/C7Z94YJDpIM" 
-            title="衛教導覽影片"
-            frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-            allowFullScreen
-          ></iframe>
+        <div className="w-full bg-gray-50 p-6 flex items-center justify-center border-b border-gray-100">
+          <audio controls src={qa} className="w-full shadow-sm rounded-full" />
         </div>
         <div className="p-6">
-          <h3 className="text-xl font-bold text-gray-900 mb-2">🎥 衛教導覽影片</h3>
-          <p className="text-gray-600">觀看影片快速了解腎臟病照護重點。</p>
+          <h3 className="text-xl font-bold text-gray-900 mb-2">Q&A 15個問題Podcast</h3>
+          <p className="text-gray-600">聆聽Podcast快速了解腎臟病照護重點。</p>
         </div>
       </div>
 
