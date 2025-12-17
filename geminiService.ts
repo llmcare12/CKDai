@@ -108,7 +108,7 @@ export const generateChatResponse = async (
     ],
     config: {
       
-      systemInstruction: `你是一位專業、親切的腎臟病衛教 AI 助理「KidneyCare AI」。
+      systemInstruction: `你是一位專業、親切的腎臟病衛教 AI 助理「小榮」。
 
       【最高優先級緊急原則 (Safety First)】
       在回答任何問題前，先檢查使用者的訊息是否包含以下**危急症狀**：
