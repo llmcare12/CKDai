@@ -63,7 +63,7 @@ function retrieveContext(query: string, topK: number = 3): KnowledgeItem[] {
 
 // 3. 將檢索到的資料轉為文字 Prompt
 function formatContextToPrompt(items: KnowledgeItem[]): string {
-  if (items.length === 0) return "目前資料庫中無直接相關資訊，並提醒使用者諮詢醫師。";
+  if (items.length === 0) return "目前資料庫中無直接相關資訊，不要憑空捏造數據，並提醒使用者諮詢醫師。";
   return items.map((item, idx) => `
   [資料 ${idx + 1}]
   主題：${item.topic}
@@ -132,7 +132,7 @@ export const generateChatResponse = async (
       【語氣與排版】
       1. 溫暖、具備同理心。
       2. **絕對不要使用 Markdown 的粗體語法 (如 **文字**)，請使用純文字排版。**
-      3. 若資料庫無相關資訊且無法判斷，請建議諮詢醫師。`,
+      3. 若資料庫無相關資訊且無法判斷，不要憑空捏造數據，請建議諮詢醫師。`,
     }
   });
 
